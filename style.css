@@ -346,7 +346,7 @@ input[type="range"]:active::-moz-range-thumb {
     position: absolute;
     display: none;
     left: 8px; /* Adjusted for larger box */
-    top: 4px;  /* Adjusted for larger box */
+    top: 0.5px;  /* Adjusted for larger box */
     width: 7px;  /* Larger checkmark */
     height: 14px;/* Larger checkmark */
     border: solid var(--color-text-dark); /* Dark checkmark */

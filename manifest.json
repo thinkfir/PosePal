@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PosePal",
+  "name": "PoseLifter",
   "version": "0.2.0",
-  "description": "Actively monitors your posture through your webcam and provides real-time feedback to help you maintain a healthier position.",
+  "description": "Actively monitors your posture through your webcam and provides real-time feedback to help you maintain a healthier posture while browsing.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -17,7 +17,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "index.html",
+    
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
