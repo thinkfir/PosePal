@@ -8,12 +8,12 @@ let wasAutoPiP = false; // Flag to track if PiP was entered automatically by thi
 let pipInteractionOccurred = false; // NEW: Flag to track if user has interacted with PiP controls
 
 // NEW: Default thresholds for angle-based checks (in degrees)
-let headTiltAngleThreshold = 20; // Increased from 17
-let forwardHeadAngleThreshold = 22; // Increased from 20
-let shoulderTiltAngleThreshold = 12; // Increased from 10
+let headTiltAngleThreshold = 25; // Increased from 20
+let forwardHeadAngleThreshold = 23; // Adjusted from 27/22
+let shoulderTiltAngleThreshold = 15; // Increased from 12
 
 // Existing settings that will be loaded from storage
-let minVerticalNeckHeight = 0.015; // Decreased from 0.018 for less sensitivity
+let minVerticalNeckHeight = 0.004; // Adjusted from 0.012/0.008
 let enableNotifications = true;
 
 // NEW: Calibration related variables
@@ -21,10 +21,16 @@ let calibratedMetrics = null; // Will store { headTilt, forwardHead, shoulderTil
 let isCalibrating = false; // Flag to trigger calibration in onResults
 
 // NEW: Default deviation thresholds (used if posture is calibrated)
-let maxHeadTiltDeviation = 10; // degrees, increased from 8 for less Y-axis sensitivity
-let maxForwardHeadDeviation = 11; // degrees, increased from 10
-let maxShoulderTiltDeviation = 8; // degrees, increased from 7
-let neckHeightRatioDeviation = 0.015; // Increased from 0.012 for less sensitivity
+let maxHeadTiltDeviation = 15; // degrees, increased from 10
+let maxForwardHeadDeviation = 13; // degrees, adjusted from 16/12
+let maxShoulderTiltDeviation = 12; // degrees, increased from 8
+let neckHeightRatioDeviation = 0.030; // Adjusted from 0.020/0.025
+
+// Debounce/grace period for posture feedback
+let lastPostureIsGood = true;
+let postureStateChangedAt = Date.now();
+let pendingPostureIsGood = true;
+let POSTURE_GRACE_PERIOD_MS = 1500; // Default 1.5 seconds, will be updated from settings
 
 document.addEventListener('DOMContentLoaded', () => {
     videoElement = document.getElementById('video');
@@ -135,18 +141,21 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadPosePalSettings() {
     // Define default values for all settings PosePal uses
     const defaultValues = {
-        headTiltAngleThreshold: 20, // Matches global
-        forwardHeadAngleThreshold: 22, // Corrected to match global lenient value
-        shoulderTiltAngleThreshold: 12, // Corrected to match global lenient value
-        minVerticalNeckHeight: 0.015, // Matches global - updated
+        headTiltAngleThreshold: 27, 
+        forwardHeadAngleThreshold: 25, // Adjusted
+        shoulderTiltAngleThreshold: 16, 
+        minVerticalNeckHeight: 0.006, // Adjusted
         enableNotifications: true,
         enableAutoPip: true,
         // NEW: Add calibration settings and deviation thresholds to defaults
         calibratedMetrics: null,
-        maxHeadTiltDeviation: 10,
-        maxForwardHeadDeviation: 11,
-        maxShoulderTiltDeviation: 8,
-        neckHeightRatioDeviation: 0.015, // Matches global - updated
+        maxHeadTiltDeviation: 17,
+        maxForwardHeadDeviation: 15, // Adjusted
+        maxShoulderTiltDeviation: 13,
+        neckHeightRatioDeviation: 0.035, // Adjusted
+        enableBlurEffect: false, // Added from previous step, ensure it's here
+        postureSensitivity: 50, // Added from previous step
+        detectionDelay: 1500, // NEW: Default detection delay
     };
 
     chrome.storage.sync.get(defaultValues, (items) => {
@@ -159,12 +168,28 @@ function loadPosePalSettings() {
             minVerticalNeckHeight = defaultValues.minVerticalNeckHeight;
             enableNotifications = defaultValues.enableNotifications;
             autoPipEnabled = defaultValues.enableAutoPip;
-            // NEW: Load calibration settings
-            calibratedMetrics = defaultValues.calibratedMetrics;
-            maxHeadTiltDeviation = defaultValues.maxHeadTiltDeviation;
-            maxForwardHeadDeviation = defaultValues.maxForwardHeadDeviation;
-            maxShoulderTiltDeviation = defaultValues.maxShoulderTiltDeviation;
-            neckHeightRatioDeviation = defaultValues.neckHeightRatioDeviation;
+            // REMOVE CALIBRATION RELATED SETTINGS FROM HERE
+            // postureSensitivityFactor is now calculated based on postureSensitivity
+            // No longer loading individual thresholds or calibration data
+            POSTURE_GRACE_PERIOD_MS = defaultValues.detectionDelay; // NEW
+            // Calculate postureSensitivityFactor based on loaded/default postureSensitivity
+            // Assuming postureSensitivity is 1-100. Let's map it to a factor, e.g., 0.5 to 1.5
+            // A sensitivity of 50 could be a factor of 1.0 (no change to base thresholds)
+            // A sensitivity of 1 could be a factor of 1.5 (less sensitive, larger thresholds)
+            // A sensitivity of 100 could be a factor of 0.5 (more sensitive, smaller thresholds)
+            postureSensitivityFactor = 1.0 - ( (items.postureSensitivity - 50) / 50 ) * 0.5; // Example mapping
+            // Ensure factor is within a reasonable range, e.g., 0.5 to 1.5
+            postureSensitivityFactor = Math.max(0.5, Math.min(1.5, postureSensitivityFactor));
+
+
+            console.log('PosePal settings loaded (ERROR FALLBACK) in script.js:', {
+                enableNotifications,
+                autoPipEnabled,
+                enableBlurEffect: items.enableBlurEffect, // ensure this is logged
+                postureSensitivity: items.postureSensitivity,
+                postureSensitivityFactor, // Log the calculated factor
+                detectionDelay: POSTURE_GRACE_PERIOD_MS // NEW
+            });
             return;
         }
         
@@ -175,25 +200,20 @@ function loadPosePalSettings() {
         minVerticalNeckHeight = items.minVerticalNeckHeight;
         enableNotifications = items.enableNotifications;
         autoPipEnabled = items.enableAutoPip;
-        // NEW: Load calibration settings
-        calibratedMetrics = items.calibratedMetrics;
-        maxHeadTiltDeviation = items.maxHeadTiltDeviation;
-        maxForwardHeadDeviation = items.maxForwardHeadDeviation;
-        maxShoulderTiltDeviation = items.maxShoulderTiltDeviation;
-        neckHeightRatioDeviation = items.neckHeightRatioDeviation;
+        // REMOVE CALIBRATION RELATED SETTINGS FROM HERE
+        POSTURE_GRACE_PERIOD_MS = items.detectionDelay; // NEW
+
+        // Calculate postureSensitivityFactor based on loaded postureSensitivity
+        postureSensitivityFactor = 1.0 - ( (items.postureSensitivity - 50) / 50 ) * 0.5; // Example mapping
+        postureSensitivityFactor = Math.max(0.5, Math.min(1.5, postureSensitivityFactor));
         
         console.log('PosePal settings loaded/applied in script.js:', {
-            headTiltAngleThreshold,
-            forwardHeadAngleThreshold,
-            shoulderTiltAngleThreshold,
-            minVerticalNeckHeight,
             enableNotifications,
             autoPipEnabled,
-            calibratedMetrics, // Log loaded calibration
-            maxHeadTiltDeviation,
-            maxForwardHeadDeviation,
-            maxShoulderTiltDeviation,
-            neckHeightRatioDeviation
+            enableBlurEffect: items.enableBlurEffect,
+            postureSensitivity: items.postureSensitivity,
+            postureSensitivityFactor,
+            detectionDelay: POSTURE_GRACE_PERIOD_MS // NEW
         });
     });
 }
@@ -520,10 +540,24 @@ function onResults(results) {
     }
   }
   
+  // --- Debounce/Grace Period Logic ---
+  const now = Date.now();
+  if (postureIsGood !== pendingPostureIsGood) {
+    // Posture state changed, start grace period
+    pendingPostureIsGood = postureIsGood;
+    postureStateChangedAt = now;
+  }
+  // Only update UI if state is stable for grace period
+  let showPostureIsGood = lastPostureIsGood;
+  if (pendingPostureIsGood !== lastPostureIsGood && (now - postureStateChangedAt) >= POSTURE_GRACE_PERIOD_MS) {
+    lastPostureIsGood = pendingPostureIsGood;
+    showPostureIsGood = lastPostureIsGood;
+  }
+
   // Update statusDisplay on the main page
   if (statusDisplay) {
       let pageMessage = "";
-      if (!postureIsGood) {
+      if (!showPostureIsGood) {
           pageMessage = feedbackMessages.join(" ");
           statusDisplay.className = 'bad-posture';
       } else {
@@ -538,7 +572,7 @@ function onResults(results) {
 
   // Draw feedback messages on the canvas for PiP
   let pipTipMessage = "";
-  if (!postureIsGood) {
+  if (!showPostureIsGood) {
       pipTipMessage = feedbackMessages.length > 0 ? feedbackMessages[0] : "Adjust posture"; // Show first simplified tip or generic
       canvasCtx.fillStyle = 'rgba(220, 53, 69, 0.85)'; // Updated bad posture PiP bar color (Bootstrap danger-like)
   } else {

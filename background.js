@@ -1,7 +1,7 @@
-// c:\Users\rajes\VSCode Projects\Posepal\tracking\posepal-tracking\background.js
 console.log("PosePal background script loaded. v3.1 - Debugging onActivated"); // Updated version
 
 let lastNotificationTime = 0;
+const NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 let posePalTabId = null; // Initial state
 let lastKnownPostureIsBad = false;
 
