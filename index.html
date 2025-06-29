@@ -1,1 +1,45 @@
-l
+<!--hi-->Add commentMore actions
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PoseCorrect Tracker</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 16px;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" playsinline style="display: none;"></video>
+  <canvas id="output" width="640" height="480"></canvas>
+  <div id="info">Posture: <span id="status">Checking...</span></div>
+
+  <!-- MediaPipe scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+
+  <!-- Your script -->
+  <script src="script.js"></script>
+</body>
+</html>
