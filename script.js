@@ -79,10 +79,11 @@ function onResults(results) {
   const dyRight = rightShoulder.y - rightEar.y;
 
   // --- Basic Posture Logic with Specific Feedback (Reverted and Modified) ---
-  const basicHorizontalTiltThreshold = 0.07; 
-  const basicMinVerticalNeckHeight = 0.03;  
-  const basicForwardHeadOffsetThreshold = -0.05; 
-  const shoulderHeightDifferenceThreshold = 0.04; 
+  // --- Basic Posture Logic with Specific Feedback (Looser Thresholds) ---Add commentMore actions
+  const basicHorizontalTiltThreshold = 0.15; // Increased from 0.07, allows more tilt
+  const basicMinVerticalNeckHeight = 0.01;  // Decreased from 0.03, allows neck to be lower
+  const basicForwardHeadOffsetThreshold = -0.10; // Decreased from -0.05 (more negative), allows head further forward
+  const shoulderHeightDifferenceThreshold = 0.10; // Increased from 0.04, allows more shoulder height difference
 
   let feedbackMessages = [];
 
