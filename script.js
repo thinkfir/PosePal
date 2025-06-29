@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     canvasElement = document.getElementById('output');
     canvasCtx = canvasElement.getContext('2d');
     statusDisplay = document.getElementById('status');
+    const settingsIcon = document.getElementById('settingsIcon'); // Get the settings icon
+    const pipButton = document.getElementById('pipButton'); // Get the PiP button
 
     // Initialize MediaPipe Pose
     pose = new Pose({
@@ -36,19 +38,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     camera.start();
 
-    // Settings button functionality removed
-    // const openSettingsButton = document.getElementById('openSettingsButton');
-    // if (openSettingsButton) {
-    //     openSettingsButton.addEventListener('click', () => {
-    //         if (chrome.runtime.openOptionsPage) {
-    //             chrome.runtime.openOptionsPage();
-    //         } else {
-    //             window.open(chrome.runtime.getURL('settings.html'));
-    //         }
-    //     });
-    // } else {
-    //     console.error("Settings button (openSettingsButton) not found.");
-    // }
+    // Settings icon functionality
+    if (settingsIcon) {
+        settingsIcon.addEventListener('click', () => {
+            if (chrome.runtime.openOptionsPage) {
+                chrome.runtime.openOptionsPage();
+            } else {
+                // Fallback for environments where openOptionsPage might not be available (e.g. during development)
+                window.open(chrome.runtime.getURL('settings.html'));
+            }
+        });
+    } else {
+        console.error("Settings icon (settingsIcon) not found.");
+    }
+
+    // PiP Button functionality
+    if (pipButton && videoElement) {
+        pipButton.addEventListener('click', async () => {
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+            } else if (document.pictureInPictureEnabled && videoElement.readyState >= videoElement.HAVE_METADATA) {
+                try {
+                    // Ensure video is playing or played recently for PiP to work reliably
+                    if (videoElement.paused) {
+                        // Attempt to play if paused, might be restricted by autoplay policies
+                        // User interaction (like clicking the button) should allow this.
+                        await videoElement.play().catch(e => console.warn("Video play attempt for PiP failed:", e));
+                    }
+                    await videoElement.requestPictureInPicture();
+                } catch (error) {
+                    console.error("Error attempting to enter Picture-in-Picture mode:", error);
+                    // Optionally, inform the user that PiP failed.
+                }
+            } else {
+                console.warn("PiP not enabled or video not ready.");
+            }
+        });
+
+        // Update PiP button text/icon based on PiP state
+        videoElement.addEventListener('enterpictureinpicture', () => {
+            pipButton.title = "Exit Picture-in-Picture";
+            // You could change the icon here, e.g., pipButton.textContent = '📺X';
+        });
+
+        videoElement.addEventListener('leavepictureinpicture', () => {
+            pipButton.title = "Toggle Picture-in-Picture";
+            // Reset icon, e.g., pipButton.textContent = '📺';
+        });
+
+    } else {
+        if (!pipButton) console.error("PiP button (pipButton) not found.");
+        if (!videoElement) console.error("Video element not found for PiP.");
+    }
 });
 
 // Analyze posture from results
@@ -85,7 +126,8 @@ function onResults(results) {
     horizontalTiltThreshold: 0.07,
     minVerticalNeckHeight: 0.03,
     forwardHeadOffsetThreshold: -0.05,
-    shoulderHeightDifferenceThreshold: 0.04
+    shoulderHeightDifferenceThreshold: 0.04,
+    notificationInterval: 20 // Added from settings.js
   };
 
   chrome.storage.sync.get(defaultSettings, (settings) => {

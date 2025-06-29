@@ -1,6 +1,8 @@
 // c:\Users\rajes\VSCode Projects\Posepal\tracking\posepal-tracking\background.js
 console.log("PoseCorrect background script loaded.");
 
+let lastNotificationTime = 0; // Timestamp of the last notification
+
 // 1. Open tracker.html on startup or install
 chrome.runtime.onStartup.addListener(() => {
   openTrackerPage();
@@ -9,9 +11,32 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install' || details.reason === 'update') {
     openTrackerPage();
+    // Initialize default settings on install, including notificationInterval
+    chrome.storage.sync.get(null, (items) => { // Get all items to see if defaults are set
+      const defaultSettings = {
+        enableNotifications: true,
+        horizontalTiltThreshold: 0.07,
+        minVerticalNeckHeight: 0.03,
+        forwardHeadOffsetThreshold: -0.05,
+        shoulderHeightDifferenceThreshold: 0.04,
+        notificationInterval: 20, // Default 20 seconds
+        // Add other defaults if they are not being set elsewhere on install
+      };
+      let newSettings = {};
+      let needsUpdate = false;
+      for (const key in defaultSettings) {
+        if (items[key] === undefined) {
+          newSettings[key] = defaultSettings[key];
+          needsUpdate = true;
+        }
+      }
+      if (needsUpdate) {
+        chrome.storage.sync.set(newSettings, () => {
+          console.log("Default settings initialized/updated in background.");
+        });
+      }
+    });
   }
-  // Initialize default settings on install (Phase 2)
-  // chrome.storage.local.set({ blurEnabled: true, audioEnabled: true, notificationsEnabled: true });
 });
 
 function openTrackerPage() {
@@ -26,44 +51,71 @@ function openTrackerPage() {
   });
 }
 
-// 2. Listen for posture status messages
+// Consolidating onMessage listeners. Remove the older one if it's fully superseded.
+// Assuming the second listener is the one to keep and enhance.
+// Remove or comment out the first onMessage listener if it's redundant.
+/*
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "POSTURE_STATUS") {
-    console.log("Posture status received:", request.status);
-    updateBadge(request.status);
+    console.log("Posture status received (old listener):", request.status);
+    updateBadge(request.status); // Ensure updateBadge is defined or remove
 
     if (request.status === "Bad Posture") {
-      // Later, check settings: e.g. chrome.storage.local.get('blurEnabled', ({blurEnabled}) => { if(blurEnabled) ... });
-      controlBlurOverlayInActiveTab(true);
+      controlBlurOverlayInActiveTab(true); // Ensure controlBlurOverlayInActiveTab is defined or remove
     } else {
-      controlBlurOverlayInActiveTab(false);
+      controlBlurOverlayInActiveTab(false); // Ensure controlBlurOverlayInActiveTab is defined or remove
     }
   }
   return true; // For async response
 });
+*/
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "POSTURE_STATUS") {
-    console.log("Background: Received posture status:", message.status);
-    // Notification logic removed
-    // if (message.status === "Bad Posture") {
-    //     chrome.storage.sync.get('poseCorrectSettings', (data) => {
-    //         if (data.poseCorrectSettings && data.poseCorrectSettings.enableNotifications) {
-    //             const notificationId = 'postureNotification-' + Date.now();
-    //             chrome.notifications.create(notificationId, {
-    //                 type: 'basic',
-    //                 iconUrl: 'icons/icon128.png',
-    //                 title: 'Posture Check',
-    //                 message: 'Please check your posture!',
-    //                 priority: 2
-    //             });
-    //         }
-    //     });
-    // }
-  }
-});
+    console.log("Background: Received posture status:", message.status, "Messages:", message.messages);
 
-// Listens for messages from script.js and shows notifications
+    // updateBadge(message.status); // If you have a badge update function
+
+    if (message.status === "Bad Posture" && message.messages && message.messages.length > 0) {
+      // Default settings for fallback
+      const defaults = {
+        enableNotifications: true,
+        notificationInterval: 20 // Default interval in seconds
+      };
+
+      chrome.storage.sync.get(defaults, (settings) => {
+        if (settings.enableNotifications) {
+          const now = Date.now();
+          const intervalMilliseconds = settings.notificationInterval * 1000;
+
+          if (now - lastNotificationTime > intervalMilliseconds) {
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'icons/icon128.png', // Ensure this path is correct
+              title: 'PosePal Alert!',
+              message: message.messages.join('\n'), // Use the detailed messages
+              priority: 2
+            }, (notificationId) => {
+              if (chrome.runtime.lastError) {
+                console.error("Notification error:", chrome.runtime.lastError.message);
+              } else {
+                console.log("Notification shown:", notificationId);
+                lastNotificationTime = now;
+              }
+            });
+          } else {
+            console.log("Notification skipped due to interval.");
+          }
+        } else {
+          console.log("Notifications are disabled in settings.");
+        }
+      });
+    }
+    // Placeholder for blur logic to be added later
+    // if (settings.enableBlurEffect) { ... }
+  }
+  return true; // Keep for async response, especially if using sendResponse
+});
 
 // Default settings (should match settings.js defaults)
 const defaultSettings = {
@@ -74,35 +126,22 @@ const defaultSettings = {
     shoulderHeightDifferenceThreshold: 0.04
 };
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === "POSTURE_STATUS") {
-        chrome.storage.sync.get(defaultSettings, (settings) => {
-            if (settings.enableNotifications && request.status === "Bad Posture") {
-                const messages = request.messages || [];
-                const notificationMessage = messages.length > 0 ? messages.join("\n") : "Adjust your posture.";
-                
-                chrome.notifications.create({
-                    type: "basic",
-                    iconUrl: "icons/icon128.png",
-                    title: "PosePal Alert!",
-                    message: notificationMessage,
-                    priority: 2
-                });
-            }
-        });
-    }
-});
-
-// Optional: Listen for storage changes to keep background script aware if needed,
-// though for notifications, checking storage on each message is usually sufficient.
-// chrome.storage.onChanged.addListener((changes, namespace) => {
-//   for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-//     console.log(
-//       `Storage key "${key}" in namespace "${namespace}" changed.`, 
-//       `Old value was "${oldValue}", new value is "${newValue}".`
-//     );
+// Placeholder for updateBadge if you use it
+// function updateBadge(status) {
+//   if (status === "Bad Posture") {
+//     chrome.action.setBadgeText({ text: "BAD" });
+//     chrome.action.setBadgeBackgroundColor({ color: [255, 0, 0, 255] });
+//   } else {
+//     chrome.action.setBadgeText({ text: "OK" });
+//     chrome.action.setBadgeBackgroundColor({ color: [0, 255, 0, 255] });
 //   }
-// });
+// }
+
+// Placeholder for controlBlurOverlayInActiveTab if you use it
+// function controlBlurOverlayInActiveTab(shouldBlur) {
+//   // This function would need to interact with content scripts
+//   console.log("controlBlurOverlayInActiveTab called with:", shouldBlur);
+// }
 
 function updateBadge(status) {
   if (status === "Bad Posture") {
