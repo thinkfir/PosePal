@@ -1,164 +1,478 @@
-/* filepath: c:\Users\rajes\VSCode Projects\Posepal\tracking\posepal-tracking\style.css */
-body {
-  margin: 0;
-  overflow: hidden;
-  font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Added Roboto as primary */
-  background: linear-gradient(135deg, #7f53ac 0%, #647dee 50%, #30cfd0 100%); /* New vibrant gradient */
-  color: #ffffff;
-  display: flex;
-  flex-direction: column; /* Align items vertically */
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  text-align: center;
-  padding: 20px; /* Add some padding to the body */
-  box-sizing: border-box;
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Orbitron:wght@400;700&display=swap');
+
+:root {
+    --primary-font: 'Poppins', sans-serif;
+    --accent-font: 'Orbitron', sans-serif;
+
+    /* Purple-based Neon Theme */
+    --color-bg-start: #2a004f; /* Deep dark purple */
+    --color-bg-mid: #4b0082;   /* Indigo / Medium purple */
+    --color-bg-end: #8a2be2;   /* Blue violet / Lighter vibrant purple */
+
+    --color-primary-neon: #ff00ff; /* Neon Magenta/Fuchsia */
+    --color-secondary-neon: #9d00ff; /* Neon Purple */
+    --color-accent-glow: rgba(255, 0, 255, 0.7); /* Glow effect for primary neon */
+    --color-accent-glow-secondary: rgba(157, 0, 255, 0.6); /* Glow for secondary neon */
+
+
+    --color-text: #e0e0e0; /* Light grey, almost white for good contrast */
+    --color-text-dark: #1a1a1a; /* Very dark for light neon backgrounds */
+    --color-container-bg: rgba(40, 20, 60, 0.85); /* Semi-transparent dark purple */
+    --color-container-border: rgba(255, 0, 255, 0.4); /* Neon magenta border */
+    --color-shadow: rgba(0, 0, 0, 0.6); /* Darker shadow for more depth */
+
+    --color-success: #00ff7f;  /* Neon Spring Green for success */
+    --color-error: #ff4d4d;    /* Bright Neon Red for error */
+    --color-interactive: #f0f000; /* Neon Yellow for interactive elements */
+
+
+    --border-radius-main: 18px; /* Slightly more rounded */
+    --border-radius-small: 10px;
+    --padding-main: 25px;
+    --padding-large: 40px;
+    --shadow-main: 0 15px 40px var(--color-shadow);
+    --shadow-inset: inset 0 2px 5px rgba(0,0,0,0.4);
 }
 
+/* General Reset & Body Styling */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--primary-font);
+    color: var(--color-text);
+    background: linear-gradient(135deg, var(--color-bg-start), var(--color-bg-mid), var(--color-bg-end));
+    background-size: 300% 300%;
+    animation: gradientFlow 20s ease infinite; /* Slightly faster animation */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding: var(--padding-main);
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Main Container Styling (for index.html) */
 .container {
-  background: rgba(255, 255, 255, 0.15); /* Slightly more opaque */
-  padding: 35px 40px; /* Increased padding */
-  border-radius: 20px; /* More rounded corners */
-  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.25); /* Softer, deeper shadow */
-  backdrop-filter: blur(8px); /* Increased blur */
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  max-width: 700px; /* Max width for larger screens */
-  width: 100%;
-  position: relative; /* For icon positioning */
+    background: var(--color-container-bg);
+    padding: var(--padding-large);
+    border-radius: var(--border-radius-main);
+    box-shadow: var(--shadow-main), 0 0 30px var(--color-accent-glow-secondary); /* Added subtle glow */
+    border: 2px solid var(--color-container-border); /* Thicker border */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    width: 100%;
+    max-width: 780px; /* Slightly wider */
+    position: relative;
+    text-align: center;
+    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.container:hover {
+    transform: translateY(-7px) scale(1.01); /* More pronounced hover */
+    box-shadow: 0 25px 55px var(--color-shadow), 0 0 40px var(--color-accent-glow);
 }
 
 h1 {
-  color: #f5f5f5; /* Slightly off-white for better contrast */
-  margin-bottom: 25px;
-  font-size: 3em; /* Larger title */
-  font-weight: 700; /* Bolder title */
-  letter-spacing: 1px; /* Add some letter spacing */
+    font-family: var(--accent-font);
+    color: var(--color-primary-neon);
+    font-size: 3.8em; /* Larger H1 */
+    margin-bottom: 35px;
+    letter-spacing: 2.5px;
+    text-shadow: 0 0 12px var(--color-primary-neon),
+                 0 0 25px var(--color-primary-neon),
+                 0 0 40px var(--color-accent-glow),
+                 0 0 70px #000; /* Added a dark outer glow for depth */
+    font-weight: 700;
 }
 
-canvas {
-  border-radius: 12px; /* Smoother radius */
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-  margin-bottom: 25px; 
-  display: block; /* Ensure it behaves as a block element */
-  max-width: 100%; /* Responsive canvas */
-  height: auto; /* Maintain aspect ratio */
+/* Canvas Styling */
+.canvas-wrapper {
+    margin-bottom: 30px;
+    border-radius: var(--border-radius-small);
+    overflow: hidden;
+    box-shadow: var(--shadow-inset), 0 0 20px var(--color-accent-glow-secondary);
+    border: 1px solid var(--color-secondary-neon);
 }
 
+canvas#output {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 640px;
+    margin: 0 auto;
+    border-radius: var(--border-radius-small);
+}
+
+/* Info/Status Display */
 #info {
-  background: rgba(0, 0, 0, 0.6); /* Slightly less transparent */
-  color: white;
-  padding: 18px 22px; /* Increased padding */
-  border-radius: 12px;
-  font-size: 1.3em; /* Larger font */
-  z-index: 1;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-  margin-top: 10px; /* Adjusted margin */
+    background: rgba(10, 0, 20, 0.75); /* Darker purple tint */
+    color: var(--color-text);
+    padding: 18px 28px; /* More padding */
+    border-radius: var(--border-radius-small);
+    font-size: 1.5em; /* Larger font */
+    box-shadow: var(--shadow-inset), 0 0 10px var(--color-accent-glow-secondary);
+    margin-top: 25px;
+    display: inline-block;
+    border: 1px solid var(--color-secondary-neon);
+    font-family: var(--accent-font); /* Use accent font for status */
 }
 
-#status {
-  font-weight: 600; /* Slightly bolder status */
+#status.good-posture {
+    color: var(--color-success);
+    text-shadow: 0 0 8px var(--color-success);
+    font-weight: 700;
 }
 
-/* Style for good posture */
-.good-posture {
-  color: #69f0ae; /* Brighter, more positive green */
+#status.bad-posture {
+    color: var(--color-error);
+    text-shadow: 0 0 8px var(--color-error);
+    font-weight: 700;
 }
 
-/* Style for bad posture */
-.bad-posture {
-  color: #ff5252; /* Clear, alarming red */
-}
-
-/* Icon styles - general for all top-right icons */
+/* Icon Buttons */
 .icon-button {
     position: absolute;
-    top: 20px; 
-    width: 36px; 
-    height: 36px; 
-    cursor: pointer;
-    font-size: 20px; 
-    line-height: 36px;
-    text-align: center;
+    top: var(--padding-main);
+    width: 45px; /* Slightly larger icons */
+    height: 45px;
+    background-color: rgba(157, 0, 255, 0.2); /* Neon purple bg */
+    color: var(--color-primary-neon);
+    border: 2px solid var(--color-primary-neon); /* Neon magenta border */
     border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.25);
-    color: #e0e0e0; 
-    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.1s ease-in-out;
-    z-index: 10; 
-    display: flex; 
+    font-size: 22px; /* Larger icon character */
+    cursor: pointer;
+    display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    padding: 0;
+    transition: all 0.25s ease-in-out;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4), 0 0 10px var(--color-accent-glow-secondary);
 }
 
 .icon-button:hover {
-    background-color: rgba(255, 255, 255, 0.35);
-    color: #ffffff;
-    transform: scale(1.1);
+    background-color: var(--color-primary-neon);
+    color: var(--color-text-dark);
+    transform: translateY(-3px) scale(1.15) rotate(10deg); /* Added rotation */
+    box-shadow: 0 6px 15px var(--color-shadow), 0 0 20px var(--color-accent-glow);
+    border-color: var(--color-accent-glow);
 }
 
-#settingsIcon {
-    right: 20px;
+#settingsIcon { right: var(--padding-main); }
+#pipButton { right: calc(var(--padding-main) + 45px + 18px); } /* Adjusted spacing */
+#calibrateButton { right: calc(var(--padding-main) + 90px + 36px); } /* Adjusted spacing */
+
+
+/* Settings Page Specific Styles */
+body.settings-page {
+    justify-content: flex-start;
+    padding-top: 60px; /* More space at top */
 }
 
-#pipButton {
-    right: 70px; /* (20px from edge + 36px icon + 14px space) */
+.settings-container {
+    background: var(--color-container-bg);
+    padding: var(--padding-large);
+    border-radius: var(--border-radius-main);
+    box-shadow: var(--shadow-main), 0 0 35px var(--color-accent-glow-secondary);
+    border: 2px solid var(--color-container-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    width: 100%;
+    max-width: 650px; /* Wider settings */
+    margin-top: 0;
+    color: var(--color-text);
+    text-align: left;
 }
 
-#calibrateButton {
-    right: 120px; /* (70px from pip + 36px icon + 14px space) */
+.settings-container h1 {
+    font-family: var(--accent-font);
+    color: var(--color-primary-neon);
+    font-size: 3em;
+    margin-bottom: 45px;
+    text-align: center;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--color-primary-neon),
+                 0 0 20px var(--color-accent-glow),
+                 0 0 30px #000;
 }
 
-/* Decorative side elements (pseudo-elements on body or container) */
+.setting-card {
+    background: rgba(20, 10, 30, 0.75); /* Darker purple card */
+    padding: var(--padding-main);
+    border-radius: var(--border-radius-small);
+    margin-bottom: 30px; /* Increased spacing */
+    box-shadow: var(--shadow-inset), 0 0 15px rgba(0,0,0,0.3);
+    border: 1px solid var(--color-secondary-neon); /* Neon purple border */
+    transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+}
+
+.setting-card:hover {
+    transform: translateY(-4px) scale(1.02); /* More hover effect */
+    box-shadow: var(--shadow-inset), 0 8px 20px rgba(157, 0, 255, 0.2), 0 0 15px var(--color-accent-glow-secondary);
+}
+
+.setting-card h2 {
+    font-family: var(--accent-font);
+    color: var(--color-secondary-neon);
+    font-size: 1.6em; /* Larger card titles */
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--color-container-border);
+    padding-bottom: 15px;
+    text-shadow: 0 0 5px var(--color-accent-glow-secondary);
+}
+
+.setting {
+    margin-bottom: 28px; /* Increased spacing */
+}
+
+.setting label,
+.checkbox-label-container > label {
+    display: block;
+    margin-bottom: 14px; /* Increased spacing */
+    font-weight: 500;
+    color: var(--color-text);
+    font-size: 1.15em; /* Slightly larger labels */
+}
+
+/* Sliders */
+input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 10px; /* Thicker track */
+    background: var(--color-secondary-neon); /* Neon purple track */
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    outline: none;
+    transition: background 0.2s ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px; /* Larger thumb */
+    height: 24px;
+    background: var(--color-primary-neon); /* Neon magenta thumb */
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid var(--color-bg-start); /* Dark purple border for thumb */
+    box-shadow: 0 0 8px var(--color-primary-neon), 0 0 15px var(--color-accent-glow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    background: var(--color-primary-neon);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid var(--color-bg-start);
+    box-shadow: 0 0 8px var(--color-primary-neon), 0 0 15px var(--color-accent-glow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+input[type="range"]:hover::-webkit-slider-thumb,
+input[type="range"]:active::-webkit-slider-thumb {
+    transform: scale(1.25); /* More pronounced thumb hover */
+    box-shadow: 0 0 12px var(--color-primary-neon), 0 0 25px var(--color-accent-glow);
+}
+input[type="range"]:hover::-moz-range-thumb,
+input[type="range"]:active::-moz-range-thumb {
+    transform: scale(1.25);
+    box-shadow: 0 0 12px var(--color-primary-neon), 0 0 25px var(--color-accent-glow);
+}
+
+
+.slider-value {
+    display: block;
+    text-align: right;
+    font-size: 1em; /* Larger slider value */
+    color: var(--color-secondary-neon);
+    margin-top: 10px; /* More space */
+    font-weight: 600; /* Bolder */
+    text-shadow: 0 0 3px var(--color-accent-glow-secondary);
+}
+
+/* Checkboxes */
+.checkbox-label-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    padding: 5px 0; /* Add some padding for better click area */
+}
+.checkbox-label-container input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.checkbox-label-container .checkbox-text-label {
+    margin-bottom: 0;
+    font-weight: 400;
+    color: var(--color-text);
+    padding-left: 40px; /* More space for larger checkbox */
+    font-size: 1.05em; /* Slightly larger text */
+    user-select: none;
+}
+.checkbox-label-container .custom-checkbox {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 24px; /* Larger checkbox */
+    width: 24px;
+    background-color: var(--color-bg-mid);
+    border: 2px solid var(--color-secondary-neon); /* Neon purple border */
+    border-radius: var(--border-radius-small);
+    transition: all 0.25s ease-in-out;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+}
+.checkbox-label-container input[type="checkbox"]:checked ~ .custom-checkbox {
+    background-color: var(--color-primary-neon); /* Neon magenta when checked */
+    border-color: var(--color-primary-neon);
+    box-shadow: 0 0 10px var(--color-accent-glow);
+}
+.checkbox-label-container .custom-checkbox::after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 8px; /* Adjusted for larger box */
+    top: 4px;  /* Adjusted for larger box */
+    width: 7px;  /* Larger checkmark */
+    height: 14px;/* Larger checkmark */
+    border: solid var(--color-text-dark); /* Dark checkmark */
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg) scale(0.9); /* Slightly smaller scale for finesse */
+    transition: transform 0.1s ease-out;
+}
+.checkbox-label-container input[type="checkbox"]:checked ~ .custom-checkbox::after {
+    display: block;
+    transform: rotate(45deg) scale(1);
+}
+.checkbox-label-container:hover .custom-checkbox {
+    border-color: var(--color-primary-neon); /* Highlight with magenta on hover */
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.4), 0 0 8px var(--color-accent-glow);
+}
+
+
+/* Buttons in Settings */
+button.settings-button {
+    font-family: var(--accent-font);
+    background: linear-gradient(45deg, var(--color-primary-neon), var(--color-secondary-neon));
+    color: var(--color-text-dark);
+    padding: 16px 25px; /* More padding */
+    border: none;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    font-size: 1.2em; /* Larger button text */
+    font-weight: 700;
+    width: 100%;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smoother transition */
+    margin-top: 25px;
+    letter-spacing: 1.5px; /* More spacing */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3), 0 0 15px var(--color-accent-glow-secondary);
+    text-transform: uppercase;
+}
+
+button.settings-button:hover {
+    transform: translateY(-4px) scale(1.02); /* More hover effect */
+    box-shadow: 0 8px 25px var(--color-shadow), 0 0 25px var(--color-accent-glow);
+    filter: brightness(1.15);
+}
+button.settings-button:active {
+    transform: translateY(-2px) scale(0.98); /* Click effect */
+    box-shadow: 0 3px 10px var(--color-shadow);
+    filter: brightness(0.9);
+}
+
+button#resetToDefaults.settings-button {
+    background: linear-gradient(45deg, var(--color-secondary-neon), #3c1a56); /* Darker purple gradient */
+    margin-top: 18px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3), 0 0 10px var(--color-accent-glow-secondary);
+}
+button#resetToDefaults.settings-button:hover {
+    box-shadow: 0 8px 25px var(--color-shadow), 0 0 20px var(--color-accent-glow-secondary);
+}
+
+
+#statusMessage {
+    margin-top: 30px; /* More space */
+    text-align: center;
+    font-weight: 600; /* Bolder status */
+    min-height: 25px;
+    font-size: 1.1em; /* Larger status message */
+    transition: all 0.3s ease;
+    font-family: var(--accent-font);
+}
+#statusMessage.success {
+    color: var(--color-success);
+    text-shadow: 0 0 8px var(--color-success), 0 0 15px var(--color-success);
+}
+#statusMessage.error {
+    color: var(--color-error);
+    text-shadow: 0 0 8px var(--color-error), 0 0 15px var(--color-error);
+}
+
+
+hr.settings-hr {
+    margin: 40px 0; /* More spacing for HR */
+    border: none;
+    height: 2px; /* Thicker HR */
+    background-image: linear-gradient(to right, transparent, var(--color-container-border), transparent); /* Fading gradient HR */
+}
+
+/* Small helper text */
+small.setting-hint {
+    display: block;
+    margin-top: 10px;
+    color: var(--color-secondary-neon);
+    font-size: 0.95em; /* Slightly larger hint */
+    font-style: italic;
+    opacity: 0.8; /* Slightly transparent */
+    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
+/* Animated decorative elements */
 body::before, body::after {
     content: '';
-    position: fixed; /* Fixed to viewport */
-    width: 200px;
-    height: 200px;
+    position: fixed;
+    width: 300px; /* Larger shapes */
+    height: 300px;
     border-radius: 50%;
-    z-index: -1; /* Behind everything */
-    opacity: 0.15;
+    z-index: -2;
+    opacity: 0.12; /* Slightly more visible */
+    filter: blur(60px); /* More blur */
 }
 
 body::before {
-    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 70%);
-    top: 10%;
-    left: 5%;
-    animation: float 8s ease-in-out infinite alternate;
+    background: var(--color-primary-neon); /* Neon Magenta shape */
+    top: 2%;
+    left: -5%; /* Partially off-screen */
+    animation: pulseShape 10s ease-in-out infinite alternate; /* Faster pulse */
 }
 
 body::after {
-    background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%);
-    bottom: 15%;
-    right: 8%;
-    animation: float 10s ease-in-out infinite alternate-reverse;
+    background: var(--color-secondary-neon); /* Neon Purple shape */
+    bottom: 3%;
+    right: -6%; /* Partially off-screen */
+    animation: pulseShape 13s ease-in-out infinite alternate-reverse;
 }
 
-@keyframes float {
-    0% { transform: translateY(0px) translateX(0px) scale(1); }
-    50% { transform: translateY(-20px) translateX(10px) scale(1.05); }
-    100% { transform: translateY(0px) translateX(0px) scale(1); }
+@keyframes pulseShape {
+    0% { transform: translateY(0px) translateX(0px) scale(0.7); opacity: 0.08; }
+    50% { transform: translateY(-35px) translateX(25px) scale(1.15); opacity: 0.2; } /* More movement and opacity */
+    100% { transform: translateY(0px) translateX(0px) scale(0.7); opacity: 0.08; }
 }
 
-/* Animation for the main gradient background */
-@keyframes gradientAnimation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-body {
-  /* Ensure this is the last body definition or combine them */
-  background-size: 250% 250%; /* Larger size for smoother animation */
-  animation: gradientAnimation 20s ease infinite; /* Slower, smoother animation */
-}
-
-/* Ensure canvas is responsive and centered */
-.canvas-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 25px;
-    width: 100%;
+video#video {
+    display: none;
 }

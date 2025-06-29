@@ -3,170 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <title>PosePal Settings</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css"> <!-- ADDED LINK TO MAIN STYLESHEET -->
-    <style>
-        /* Specific styles for settings page body to override general style.css */
-        body.settings-page {
-            background: linear-gradient(135deg, #7f53ac 0%, #647dee 50%, #30cfd0 100%);
-            display: flex; /* Ensure flex is re-applied if overridden */
-            flex-direction: column;
-            justify-content: flex-start; /* Align to top for settings */
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px; /* Consistent padding */
-            box-sizing: border-box;
-        }
-
-        /* Keep settings container distinct from the main page's container */
-        .settings-container {
-            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; /* Ensure font consistency */
-            background-color: rgba(255, 255, 255, 0.9); /* Brighter for readability */
-            color: #333;
-            padding: 30px 35px; /* Adjusted padding */
-            border-radius: 16px; /* Consistent with main page's container */
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); /* Adjusted shadow */
-            width: 100%;
-            max-width: 480px; /* Max width for settings */
-            min-width: 350px;
-            margin-top: 30px; /* Space from top */
-            box-sizing: border-box;
-        }
-
-        h1 {
-            color: #ffffff; /* White title to match main page */
-            text-align: center;
-            margin-bottom: 25px;
-            font-size: 28px; /* Slightly adjusted */
-            font-weight: 700;
-        }
-        .setting {
-            margin-bottom: 25px;
-        }
-        .setting label,
-        .checkbox-label-container label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 500; /* Medium weight for labels */
-            color: #34495e; /* Slightly muted label color */
-            font-size: 15px;
-        }
-        .setting input[type="range"] {
-            width: 100%;
-            margin-top: 5px;
-            accent-color: #7f53ac;
-        }
-        .setting input[type="checkbox"] {
-            width: 18px; /* Slightly larger checkbox */
-            height: 18px;
-            margin-right: 10px;
-            vertical-align: middle;
-            accent-color: #7f53ac; /* Primary accent color */
-        }
-        .checkbox-label-container {
-            display: flex;
-            align-items: center;
-        }
-         .checkbox-label-container label { 
-            margin-bottom: 0;
-            font-weight: 400; /* Normal weight for checkbox text */
-            color: #333;
-        }
-        button {
-            background-color: #7f53ac; /* Primary accent color */
-            color: white;
-            padding: 12px 18px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 500;
-            width: 100%;
-            transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-            margin-top: 10px; 
-        }
-        button:hover {
-            background-color: #6a4293; /* Darker shade on hover */
-            transform: translateY(-1px);
-        }
-        button:active {
-            transform: translateY(0px);
-        }
-        button#resetToDefaults {
-            background-color: #95a5a6; /* Muted grey for reset */
-            margin-top: 8px;
-        }
-        button#resetToDefaults:hover {
-            background-color: #7f8c8d; 
-        }
-        #statusMessage {
-            margin-top: 20px;
-            text-align: center;
-            font-weight: 500;
-            color: #7f53ac;
-            min-height: 20px; 
-        }
-        hr {
-            margin: 30px 0;
-            border: none;
-            border-top: 1px solid #e0e0e0; /* Lighter separator */
-        }
-        .slider-value {
-            display: block;
-            text-align: right;
-            font-size: 0.9em;
-            color: #555;
-            margin-top: -8px;
-            margin-bottom: 15px;
-        }
-    </style>
+    <!-- Google Fonts: Poppins and Orbitron -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="settings-page"> <!-- ADDED CLASS TO BODY -->
-    <h1>PosePal Settings</h1>
-
+<body class="settings-page"> <!-- Added class to body -->
     <div class="settings-container">
-        <div class="setting">
-            <label for="postureSensitivity">Overall Posture Sensitivity</label>
-            <input type="range" id="postureSensitivity" name="postureSensitivity" min="1" max="100" value="50">
-            <span class="slider-value" id="postureSensitivityValue">50</span>
-        </div>
+        <h1>PosePal Settings</h1>
 
-        <div class="setting">
-            <label for="detectionDelay">Detection Delay (ms):</label>
-            <input type="range" id="detectionDelay" name="detectionDelay" min="0" max="10000" step="100">
-            <span class="slider-value" id="detectionDelayValue">1500</span> ms
-        </div>
-
-        <hr>
-
-        <div class="setting">
-            <div class="checkbox-label-container">
-                <input type="checkbox" id="enableNotifications">
-                <label for="enableNotifications">Enable Posture Notifications</label>
+        <div class="setting-card">
+            <h2>Detection Sensitivity</h2>
+            <div class="setting">
+                <label for="postureSensitivity">Overall Posture Sensitivity</label>
+                <input type="range" id="postureSensitivity" name="postureSensitivity" min="1" max="100" value="50">
+                <span class="slider-value" id="postureSensitivityValue">50</span>
             </div>
-            <small style="display: block; margin-top: 5px; color: #666;">Notifications have a 5-minute cooldown.</small>
-        </div>
 
-        <div class="setting">
-            <div class="checkbox-label-container">
-                <input type="checkbox" id="enableAutoPip">
-                <label for="enableAutoPip">Enable Automatic Picture-in-Picture (PiP)</label>
+            <div class="setting">
+                <label for="detectionDelay">Detection Delay (ms)</label>
+                <input type="range" id="detectionDelay" name="detectionDelay" min="0" max="10000" step="100" value="1500">
+                <span class="slider-value" id="detectionDelayValue">1500 ms</span>
             </div>
         </div>
 
-        <div class="setting">
-            <div class="checkbox-label-container">
-                <input type="checkbox" id="enableBlurEffect">
-                <label for="enableBlurEffect">Blur other tabs on bad posture</label>
+        <hr class="settings-hr">
+
+        <div class="setting-card">
+            <h2>Features & Notifications</h2>
+            <div class="setting">
+                <div class="checkbox-label-container">
+                    <input type="checkbox" id="enableNotifications">
+                    <span class="custom-checkbox"></span>
+                    <label for="enableNotifications" class="checkbox-text-label">Enable Posture Notifications</label>
+                </div>
+                <small class="setting-hint">Notifications have a 5-minute cooldown.</small>
+            </div>
+
+            <div class="setting">
+                <div class="checkbox-label-container">
+                    <input type="checkbox" id="enableAutoPip">
+                    <span class="custom-checkbox"></span>
+                    <label for="enableAutoPip" class="checkbox-text-label">Enable Automatic Picture-in-Picture (PiP)</label>
+                </div>
             </div>
         </div>
-                <div class="setting">
-            <label for="blurDelay">Blur Activation Delay (ms):</label>
-            <input type="range" id="blurDelay" name="blurDelay" min="0" max="5000" step="100" value="1000">
-            <span class="slider-value" id="blurDelayValue">1000</span> ms
+         <hr class="settings-hr">
+
+        <div class="setting-card">
+             <h2>Visual Alerts</h2>
+            <div class="setting">
+                <div class="checkbox-label-container">
+                    <input type="checkbox" id="enableBlurEffect">
+                    <span class="custom-checkbox"></span>
+                    <label for="enableBlurEffect" class="checkbox-text-label">Blur other tabs on bad posture</label>
+                </div>
+            </div>
+            <div class="setting"> <!-- This blurDelay was outside a card before, now grouped -->
+                <label for="blurDelay">Blur Activation Delay (ms)</label>
+                <input type="range" id="blurDelay" name="blurDelay" min="0" max="5000" step="100" value="1000">
+                <span class="slider-value" id="blurDelayValue">1000 ms</span>
+            </div>
         </div>
-        <button id="saveSettings">Save Settings</button>
-        <button id="resetToDefaults">Reset to Defaults</button>
+         <hr class="settings-hr">
+
+        <button id="saveSettings" class="settings-button">Save Settings</button>
+        <button id="resetToDefaults" class="settings-button">Reset to Defaults</button>
         <p id="statusMessage"></p>
     </div>
 
