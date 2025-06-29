@@ -12,7 +12,6 @@ chrome.runtime.onInstalled.addListener((details) => {
   // Initialize default settings on install (Phase 2)
   // chrome.storage.local.set({ blurEnabled: true, audioEnabled: true, notificationsEnabled: true });
 });
-
 function openTrackerPage() {
   const trackerUrl = chrome.runtime.getURL("index.html"); // Adjusted path
   chrome.tabs.query({ url: trackerUrl }, (tabs) => {
