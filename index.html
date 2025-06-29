@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PoseLift Tracker</title>
+  <title>PosePal Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
     body { /* Apply gradient background and font from style.css */
@@ -109,23 +110,23 @@
   </style>
 </head>
 <body>
-  <!-- Settings icon moved inside the container for better layout control -->
   <div class="container">
-    <div id="settingsIcon" title="Open Settings">⚙️</div>
-    <div id="pipButton" title="Toggle Picture-in-Picture">📺</div> <!-- Simple TV icon, consider a better one -->
-    <button id="calibrateButton" title="Calibrate Posture" style="position: absolute; top: 15px; right: 105px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; line-height: 32px; text-align: center; border-radius: 50%; background-color: rgba(255, 255, 255, 0.2); color: #f0f0f0; transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out; z-index: 10; display: flex; align-items: center; justify-content: center; border: none; padding: 0;">🎯</button> <!-- NEW Calibrate Button -->
-    <h1>PosePal</h1> <!-- Changed from PoseLift to PosePal -->
-    <canvas id="output" width="640" height="480"></canvas>
+    <!-- Icons are now styled with .icon-button class from style.css -->
+    <div id="settingsIcon" class="icon-button" title="Open Settings">⚙️</div>
+    <div id="pipButton" class="icon-button" title="Toggle Picture-in-Picture">📺</div>
+    <button id="calibrateButton" class="icon-button" title="Calibrate Posture">🎯</button>
+    
+    <h1>PosePal</h1>
+    <div class="canvas-wrapper"> <!-- Added wrapper for better canvas control -->
+        <canvas id="output" width="640" height="480"></canvas>
+    </div>
     <div id="info">Posture: <span id="status">Checking...</span></div>
   </div>
 
   <video id="video" playsinline style="display: none;"></video>
   
-  <!-- MediaPipe scripts -->
   <script src="mediapipe.libs/pose.js"></script>
   <script src="mediapipe.libs/camera_utils.js"></script>
-
-  <!-- Your script -->
   <script src="script.js"></script>
 </body>
 </html>

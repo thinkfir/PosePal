@@ -3,100 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <title>PosePal Settings</title>
-    <!-- Removed link to style.css to avoid conflicts if it's not tailored for settings page -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 20px;
-            width: 380px; /* Increased width to prevent cutoff */
-            margin: 0 auto; /* Center page if window is wider */
-            background-color: #f3e5f5; /* Light purple background */
-            color: #4a148c; /* Dark purple text */
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            padding: 25px;
+            width: auto; /* Allow it to be flexible */
+            max-width: 480px; /* Max width for larger popups */
+            min-width: 380px; /* Min width to prevent squishing */
+            margin: 20px auto; 
+            background-color: #f4f7f9; /* Lighter, cleaner background */
+            color: #333; 
             box-sizing: border-box;
         }
         h1 {
-            color: #6a1b9a; /* Medium-dark purple for heading */
+            color: #2c3e50; /* Darker, more professional heading */
             text-align: center;
-            margin-bottom: 30px;
-            font-size: 24px;
+            margin-bottom: 35px;
+            font-size: 26px;
+            font-weight: 700;
         }
         .settings-container {
             background-color: #ffffff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(74, 20, 140, 0.15); /* Subtle purple shadow */
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Softer shadow */
         }
         .setting {
-            margin-bottom: 25px;
+            margin-bottom: 28px;
         }
-        .setting label {
+        .setting label,
+        .checkbox-label-container label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #6a1b9a; /* Medium-dark purple for labels */
-            font-size: 14px;
+            margin-bottom: 10px;
+            font-weight: 500; /* Medium weight for labels */
+            color: #34495e; /* Slightly muted label color */
+            font-size: 15px;
         }
-        .setting input[type="checkbox"],
         .setting input[type="number"],
         .setting select {
-            width: calc(100% - 22px); /* Full width minus padding */
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #ce93d8; /* Lighter purple border for inputs */
+            width: 100%; /* Full width */
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #dce4ec; /* Light grey border */
             font-size: 14px;
             box-sizing: border-box;
-            color: #4a148c; /* Dark purple text for input values */
+            color: #2c3e50;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .setting input[type="number"]:focus,
+        .setting select:focus {
+            border-color: #7f53ac; /* Accent color on focus */
+            box-shadow: 0 0 0 2px rgba(127, 83, 172, 0.2);
+            outline: none;
         }
         .setting input[type="checkbox"] {
-            width: auto;
-            margin-right: 8px;
+            width: 18px; /* Slightly larger checkbox */
+            height: 18px;
+            margin-right: 10px;
             vertical-align: middle;
-            accent-color: #7b1fa2; /* Purple for checkbox tick */
+            accent-color: #7f53ac; /* Primary accent color */
         }
-        .checkbox-label-container { /* Wrapper for checkbox and its actual label text */
+        .checkbox-label-container {
             display: flex;
             align-items: center;
         }
-         .checkbox-label-container label { /* Label text next to checkbox */
+         .checkbox-label-container label { 
             margin-bottom: 0;
-            font-weight: normal;
-            color: #4a148c; /* Match body text color */
+            font-weight: 400; /* Normal weight for checkbox text */
+            color: #333;
         }
 
         button {
-            background-color: #7b1fa2; /* Primary purple for buttons */
+            background-color: #7f53ac; /* Primary accent color */
             color: white;
-            padding: 12px 18px;
+            padding: 14px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 500;
             width: 100%;
-            transition: background-color 0.2s ease-in-out;
-            margin-top: 10px; /* Add some space above the first button */
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+            margin-top: 15px; 
         }
         button:hover {
-            background-color: #6a1b9a; /* Darker purple on hover */
+            background-color: #6a4293; /* Darker shade on hover */
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0px);
         }
         button#resetToDefaults {
-            background-color: #ab47bc; /* Lighter purple for reset button */
+            background-color: #95a5a6; /* Muted grey for reset */
+            margin-top: 10px;
         }
         button#resetToDefaults:hover {
-            background-color: #9c27b0; /* Slightly darker hover for reset */
+            background-color: #7f8c8d; 
+        }
+        button#clearCalibration {
+            background-color: #e74c3c; /* Red for clear/destructive action */
+            margin-top: 10px;
+            margin-bottom: 25px; /* More space after this button */
+        }
+        button#clearCalibration:hover {
+            background-color: #c0392b;
         }
         #statusMessage {
-            margin-top: 20px;
+            margin-top: 25px;
             text-align: center;
             font-weight: 500;
-            color: #7b1fa2; /* Primary purple for status message */
-            min-height: 20px; /* Prevent layout shift */
+            color: #7f53ac;
+            min-height: 22px; 
         }
-        /* Ensure range text in labels is less prominent */
         .setting label span {
-            font-weight: normal;
-            font-size: 0.9em;
-            color: #8e24aa; /* Medium purple for range text */
+            font-weight: 400;
+            font-size: 0.85em;
+            color: #7f8c8d; /* Muted grey for range hints */
+        }
+        hr {
+            margin: 35px 0;
+            border: none;
+            border-top: 1px solid #e0e0e0; /* Lighter separator */
+        }
+        h2 {
+            color: #34495e;
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        #calibratedValuesDisplay {
+            background-color: #e9ecef; /* Light grey background for this section */
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #495057;
+        }
+        #calibratedValuesDisplay div {
+            margin-bottom: 5px;
+        }
+        #calibratedValuesDisplay label {
+            color: #2c3e50 !important; /* Ensure heading is dark */
+            font-weight: 700 !important;
+            font-size: 15px !important;
         }
     </style>
 </head>
@@ -107,33 +158,8 @@
         <div class="setting">
             <div class="checkbox-label-container">
                 <input type="checkbox" id="enableNotifications">
-                <label for="enableNotifications">Enable Notifications</label>
+                <label for="enableNotifications">Enable Posture Notifications</label>
             </div>
-        </div>
-
-        <div class="setting">
-            <label for="headTiltAngleThreshold">Head Tilt Angle Threshold (degrees) <span>(0-45)</span>:</label>
-            <input type="number" id="headTiltAngleThreshold" name="headTiltAngleThreshold" step="1" min="0" max="45">
-        </div>
-
-        <div class="setting">
-            <label for="forwardHeadAngleThreshold">Forward Head Angle Threshold (degrees) <span>(0-45)</span>:</label>
-            <input type="number" id="forwardHeadAngleThreshold" name="forwardHeadAngleThreshold" step="1" min="0" max="45">
-        </div>
-
-        <div class="setting">
-            <label for="shoulderTiltAngleThreshold">Shoulder Tilt Angle Threshold (degrees) <span>(0-30)</span>:</label>
-            <input type="number" id="shoulderTiltAngleThreshold" name="shoulderTiltAngleThreshold" step="1" min="0" max="30">
-        </div>
-
-        <div class="setting">
-            <label for="minVerticalNeckHeight">Min Vertical Neck Height (ratio) <span>(0.01-0.1)</span>:</label>
-            <input type="number" id="minVerticalNeckHeight" name="minVerticalNeckHeight" step="0.005" min="0.01" max="0.1">
-        </div>
-
-        <div class="setting">
-            <label for="notificationInterval">Notification Interval (seconds) <span>(1-300)</span>:</label>
-            <input type="number" id="notificationInterval" name="notificationInterval" step="1" min="1" max="300">
         </div>
 
         <div class="setting">
@@ -146,44 +172,75 @@
         <div class="setting">
             <div class="checkbox-label-container">
                 <input type="checkbox" id="enableBlurEffect">
-                <label for="enableBlurEffect">Enable Blur Effect on Other Tabs (Bad Posture)</label>
+                <label for="enableBlurEffect">Blur other tabs on bad posture</label>
             </div>
         </div>
+        
+        <hr>
+        <h2>Detection Sensitivity (Absolute)</h2>
+        <p style="font-size: 0.9em; color: #555; margin-top: -15px; margin-bottom: 20px;">These settings apply when posture is not calibrated. Lower values are more strict.</p>
 
-        <hr style="margin: 30px 0; border-color: #ce93d8;">
+        <div class="setting">
+            <label for="headTiltAngleThreshold">Head Tilt Angle <span>(degrees, 0-45)</span>:</label>
+            <input type="number" id="headTiltAngleThreshold" name="headTiltAngleThreshold" step="1" min="0" max="45">
+        </div>
 
+        <div class="setting">
+            <label for="forwardHeadAngleThreshold">Forward Head Angle <span>(degrees, 0-45)</span>:</label>
+            <input type="number" id="forwardHeadAngleThreshold" name="forwardHeadAngleThreshold" step="1" min="0" max="45">
+        </div>
+
+        <div class="setting">
+            <label for="shoulderTiltAngleThreshold">Shoulder Tilt Angle <span>(degrees, 0-30)</span>:</label>
+            <input type="number" id="shoulderTiltAngleThreshold" name="shoulderTiltAngleThreshold" step="1" min="0" max="30">
+        </div>
+
+        <div class="setting">
+            <label for="minVerticalNeckHeight">Min. Neck Height <span>(ratio, 0.01-0.1)</span>:</label>
+            <input type="number" id="minVerticalNeckHeight" name="minVerticalNeckHeight" step="0.005" min="0.01" max="0.1">
+        </div>
+
+        <hr>
         <h2>Calibration Settings</h2>
 
-        <div class="setting" id="calibratedValuesDisplay" style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom:15px; display: none;">
-            <label style="font-weight:bold; color: #6a1b9a; margin-bottom: 5px;">Current Calibrated Posture:</label>
+        <div class="setting" id="calibratedValuesDisplay" style="display: none;">
+            <label>Current Calibrated Posture:</label>
             <div id="calibratedHeadTilt">- Head Tilt: N/A</div>
             <div id="calibratedForwardHead">- Forward Head: N/A</div>
             <div id="calibratedShoulderTilt">- Shoulder Tilt: N/A</div>
             <div id="calibratedNeckHeight">- Neck Height Ratio: N/A</div>
         </div>
+        <p style="font-size: 0.9em; color: #555; margin-top: -15px; margin-bottom: 20px;">Define allowed deviation from your calibrated good posture. Smaller values are more strict.</p>
 
         <div class="setting">
-            <label for="maxHeadTiltDeviation">Max Head Tilt Deviation (degrees) <span>(0-20)</span>:</label>
+            <label for="maxHeadTiltDeviation">Max Head Tilt Deviation <span>(degrees, 0-20)</span>:</label>
             <input type="number" id="maxHeadTiltDeviation" name="maxHeadTiltDeviation" step="1" min="0" max="20">
         </div>
 
         <div class="setting">
-            <label for="maxForwardHeadDeviation">Max Forward Head Deviation (degrees) <span>(0-20)</span>:</label>
+            <label for="maxForwardHeadDeviation">Max Forward Head Deviation <span>(degrees, 0-20)</span>:</label>
             <input type="number" id="maxForwardHeadDeviation" name="maxForwardHeadDeviation" step="1" min="0" max="20">
         </div>
 
         <div class="setting">
-            <label for="maxShoulderTiltDeviation">Max Shoulder Tilt Deviation (degrees) <span>(0-15)</span>:</label>
+            <label for="maxShoulderTiltDeviation">Max Shoulder Tilt Deviation <span>(degrees, 0-15)</span>:</label>
             <input type="number" id="maxShoulderTiltDeviation" name="maxShoulderTiltDeviation" step="1" min="0" max="15">
         </div>
 
         <div class="setting">
-            <label for="neckHeightRatioDeviation">Neck Height Ratio Deviation (ratio) <span>(0.001-0.05)</span>:</label>
+            <label for="neckHeightRatioDeviation">Neck Height Deviation <span>(ratio, 0.001-0.05)</span>:</label>
             <input type="number" id="neckHeightRatioDeviation" name="neckHeightRatioDeviation" step="0.001" min="0.001" max="0.05">
         </div>
 
-        <button id="clearCalibration" style="background-color: #ef5350; margin-bottom: 20px;">Clear Calibrated Posture</button>
+        <button id="clearCalibration">Clear Calibrated Posture</button>
         
+        <hr>
+        <h2>Other Settings</h2>
+        <div class="setting">
+            <label for="notificationInterval">Notification Interval <span>(seconds, 1-300)</span>:</label>
+            <input type="number" id="notificationInterval" name="notificationInterval" step="1" min="1" max="300">
+        </div>
+
         <button id="saveSettings">Save Settings</button>
         <button id="resetToDefaults">Reset to Defaults</button>
         <p id="statusMessage"></p>

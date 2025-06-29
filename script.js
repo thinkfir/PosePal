@@ -485,37 +485,37 @@ function onResults(results) {
   if (calibratedMetrics) {
     // MODE 1: Check against calibrated posture using deviation thresholds
     if (Math.abs(currentMetrics.headTilt - calibratedMetrics.headTilt) > maxHeadTiltDeviation) {
-        feedbackMessages.push(`Level head (calibrated: ${calibratedMetrics.headTilt.toFixed(0)}°, current: ${currentMetrics.headTilt.toFixed(0)}°).`);
+        feedbackMessages.push(`Level head.`); // Simplified
         postureIsGood = false;
     }
     if (Math.abs(currentMetrics.forwardHead - calibratedMetrics.forwardHead) > maxForwardHeadDeviation) {
-        feedbackMessages.push(`Align head (calibrated: ${calibratedMetrics.forwardHead.toFixed(0)}°, current: ${currentMetrics.forwardHead.toFixed(0)}°).`);
+        feedbackMessages.push(`Align head.`); // Simplified
         postureIsGood = false;
     }
     if (Math.abs(currentMetrics.shoulderTilt - calibratedMetrics.shoulderTilt) > maxShoulderTiltDeviation) {
-        feedbackMessages.push(`Level shoulders (calibrated: ${calibratedMetrics.shoulderTilt.toFixed(0)}°, current: ${currentMetrics.shoulderTilt.toFixed(0)}°).`);
+        feedbackMessages.push(`Level shoulders.`); // Simplified
         postureIsGood = false;
     }
     if (currentMetrics.neckHeight < (calibratedMetrics.neckHeight - neckHeightRatioDeviation)) {
-        feedbackMessages.push(`Sit up straighter (calibrated neck height factor, current: ${currentMetrics.neckHeight.toFixed(3)}).`);
+        feedbackMessages.push(`Sit up straighter.`); // Simplified
         postureIsGood = false;
     }
   } else {
     // MODE 2: Fallback to absolute thresholds if not calibrated
     if (currentMetrics.neckHeight < minVerticalNeckHeight) { 
-      feedbackMessages.push("Lift your chin / Sit up straighter.");
+      feedbackMessages.push("Sit up straighter."); // Simplified
       postureIsGood = false;
     }
     if (Math.abs(currentMetrics.headTilt) > headTiltAngleThreshold) {
-      feedbackMessages.push(`Level your head (ears ${currentMetrics.headTilt > 0 ? 'right tilted down' : 'left tilted down'}).`);
+      feedbackMessages.push(`Level your head.`); // Simplified
       postureIsGood = false;
     }
     if (Math.abs(currentMetrics.forwardHead) > forwardHeadAngleThreshold) {
-      feedbackMessages.push(`Align head centrally over shoulders (offset by ${currentMetrics.forwardHead.toFixed(0)}°).`);
+      feedbackMessages.push("Align your head (pull back)."); // Simplified
       postureIsGood = false;
     }
     if (Math.abs(currentMetrics.shoulderTilt) > shoulderTiltAngleThreshold) {
-      feedbackMessages.push(`Level your shoulders (${currentMetrics.shoulderTilt > 0 ? 'right shoulder lower' : 'left shoulder lower'}).`);
+      feedbackMessages.push("Level your shoulders."); // Simplified
       postureIsGood = false;
     }
   }
@@ -527,40 +527,50 @@ function onResults(results) {
           pageMessage = feedbackMessages.join(" ");
           statusDisplay.className = 'bad-posture';
       } else {
-          pageMessage = "Good Posture";
+          pageMessage = "Good Posture!";
           statusDisplay.className = 'good-posture';
       }
       if (!calibratedMetrics) {
-          const tip = "Tip: Click 🎯 to calibrate. ";
-          if (postureIsGood) { pageMessage = tip + "Status: Good Posture."; }
-          else { pageMessage = tip + pageMessage; }
+          pageMessage += (feedbackMessages.length > 0 ? " " : "") + "(Consider calibrating 🎯 for personalized tips)";
       }
       statusDisplay.textContent = pageMessage;
   }
 
-  // NEW: Draw feedback messages on the canvas for PiP
+  // Draw feedback messages on the canvas for PiP
   let pipTipMessage = "";
   if (!postureIsGood) {
-      pipTipMessage = feedbackMessages.join(" / "); // Use slash for PiP, more compact
-      canvasCtx.fillStyle = 'rgba(255, 0, 0, 0.7)'; // Reddish background for bad posture
+      pipTipMessage = feedbackMessages.length > 0 ? feedbackMessages[0] : "Adjust posture"; // Show first simplified tip or generic
+      canvasCtx.fillStyle = 'rgba(220, 53, 69, 0.85)'; // Updated bad posture PiP bar color (Bootstrap danger-like)
   } else {
-      pipTipMessage = "Good Posture";
-      canvasCtx.fillStyle = 'rgba(0, 128, 0, 0.7)'; // Greenish background for good posture
-  }
-  // Add calibration tip to PiP only if not calibrated and main tab is visible (less intrusive in PiP)
-  if (!calibratedMetrics && document.visibilityState === 'visible') {
-      pipTipMessage = "🎯 Calibrate! " + pipTipMessage;
+      pipTipMessage = "Good Posture!";
+      canvasCtx.fillStyle = 'rgba(40, 167, 69, 0.85)'; // Updated good posture PiP bar color (Bootstrap success-like)
   }
   
-  const textLineHeight = 18; // For PiP text
-  const textPadding = 5;
-  // Simple single line for PiP for now, can be expanded if needed
-  canvasCtx.fillRect(0, canvasElement.height - (textLineHeight + 2 * textPadding), canvasElement.width, (textLineHeight + 2 * textPadding));
+  let calibrationPipMessage = "";
+  if (!calibratedMetrics) {
+      calibrationPipMessage = "Tip: Calibrate on main page 🎯";
+  }
+  
+  const textPadding = 10;
+  // Increased bar height: base 45px, +15px if calibration message is also shown
+  const barHeight = calibrationPipMessage ? 60 : 45; 
+  const mainTipY = canvasElement.height - (barHeight / 2) + (calibrationPipMessage ? -9 : 6); // Adjusted Y for new bar height & potential second line
+  const calibTipY = canvasElement.height - 18; // Position for calibration tip line
+
+  // Draw background bar
+  canvasCtx.fillRect(0, canvasElement.height - barHeight, canvasElement.width, barHeight);
+  
   canvasCtx.fillStyle = 'white';
-  canvasCtx.font = 'bold 14px Arial'; // Slightly smaller and bold for PiP
+  canvasCtx.font = 'bold 19px Roboto, Arial'; // Slightly larger main tip font
   canvasCtx.textAlign = 'center';
-  canvasCtx.fillText(pipTipMessage, canvasElement.width / 2, canvasElement.height - textPadding - (textLineHeight / 2) + 3); // Adjust Y for better centering
-  canvasCtx.textAlign = 'left'; // Reset alignment
+  canvasCtx.fillText(pipTipMessage, canvasElement.width / 2, mainTipY);
+
+  if (calibrationPipMessage) {
+      canvasCtx.font = '15px Roboto, Arial'; // Slightly larger calibration tip font
+      canvasCtx.fillText(calibrationPipMessage, canvasElement.width / 2, calibTipY);
+  }
+
+  canvasCtx.textAlign = 'left'; // Reset
 
   // Send status to background script unconditionally for badge and blur logic
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {

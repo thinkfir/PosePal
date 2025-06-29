@@ -1,71 +1,147 @@
+/* filepath: c:\Users\rajes\VSCode Projects\Posepal\tracking\posepal-tracking\style.css */
 body {
   margin: 0;
   overflow: hidden;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Added Roboto as primary */
+  background: linear-gradient(135deg, #7f53ac 0%, #647dee 50%, #30cfd0 100%); /* New vibrant gradient */
   color: #ffffff;
   display: flex;
+  flex-direction: column; /* Align items vertically */
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   text-align: center;
+  padding: 20px; /* Add some padding to the body */
+  box-sizing: border-box;
 }
 
 .container {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 30px;
-  border-radius: 15px;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.15); /* Slightly more opaque */
+  padding: 35px 40px; /* Increased padding */
+  border-radius: 20px; /* More rounded corners */
+  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.25); /* Softer, deeper shadow */
+  backdrop-filter: blur(8px); /* Increased blur */
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  max-width: 700px; /* Max width for larger screens */
+  width: 100%;
+  position: relative; /* For icon positioning */
 }
 
 h1 {
-  color: #f0f0f0;
-  margin-bottom: 20px;
-  font-size: 2.5em;
+  color: #f5f5f5; /* Slightly off-white for better contrast */
+  margin-bottom: 25px;
+  font-size: 3em; /* Larger title */
+  font-weight: 700; /* Bolder title */
+  letter-spacing: 1px; /* Add some letter spacing */
 }
 
 canvas {
-  /* position: absolute; */ /* Removed to center it with flexbox */
-  /* top: 0; */
-  /* left: 0; */
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  margin-bottom: 20px; /* Added margin for spacing */
+  border-radius: 12px; /* Smoother radius */
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  margin-bottom: 25px; 
+  display: block; /* Ensure it behaves as a block element */
+  max-width: 100%; /* Responsive canvas */
+  height: auto; /* Maintain aspect ratio */
 }
 
 #info {
-  /* position: absolute; */ /* Removed to center it with flexbox */
-  /* top: 10px; */
-  /* left: 10px; */
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.6); /* Slightly less transparent */
   color: white;
-  padding: 15px;
-  border-radius: 10px;
-  font-size: 1.2em;
+  padding: 18px 22px; /* Increased padding */
+  border-radius: 12px;
+  font-size: 1.3em; /* Larger font */
   z-index: 1;
-  /* width: fit-content; */ /* Removed to allow centering */
-  /* margin: 0 auto 20px auto; */ /* Centering and adding margin */
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  margin-top: 10px; /* Adjusted margin */
 }
 
 #status {
-  font-weight: bold;
+  font-weight: 600; /* Slightly bolder status */
 }
 
 /* Style for good posture */
 .good-posture {
-  color: #70e000; /* A vibrant green */
+  color: #69f0ae; /* Brighter, more positive green */
 }
 
 /* Style for bad posture */
 .bad-posture {
-  color: #ff4d6d; /* A clear red */
+  color: #ff5252; /* Clear, alarming red */
 }
 
-/* Optional: Add a subtle animation to the background */
+/* Icon styles - general for all top-right icons */
+.icon-button {
+    position: absolute;
+    top: 20px; 
+    width: 36px; 
+    height: 36px; 
+    cursor: pointer;
+    font-size: 20px; 
+    line-height: 36px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #e0e0e0; 
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.1s ease-in-out;
+    z-index: 10; 
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+    border: none;
+    padding: 0;
+}
+
+.icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+#settingsIcon {
+    right: 20px;
+}
+
+#pipButton {
+    right: 70px; /* (20px from edge + 36px icon + 14px space) */
+}
+
+#calibrateButton {
+    right: 120px; /* (70px from pip + 36px icon + 14px space) */
+}
+
+/* Decorative side elements (pseudo-elements on body or container) */
+body::before, body::after {
+    content: '';
+    position: fixed; /* Fixed to viewport */
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    z-index: -1; /* Behind everything */
+    opacity: 0.15;
+}
+
+body::before {
+    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 70%);
+    top: 10%;
+    left: 5%;
+    animation: float 8s ease-in-out infinite alternate;
+}
+
+body::after {
+    background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%);
+    bottom: 15%;
+    right: 8%;
+    animation: float 10s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) translateX(0px) scale(1); }
+    50% { transform: translateY(-20px) translateX(10px) scale(1.05); }
+    100% { transform: translateY(0px) translateX(0px) scale(1); }
+}
+
+/* Animation for the main gradient background */
 @keyframes gradientAnimation {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -73,7 +149,16 @@ canvas {
 }
 
 body {
-  background: linear-gradient(135deg, #667eea, #764ba2, #3a1c71);
-  background-size: 200% 200%;
-  animation: gradientAnimation 15s ease infinite;
+  /* Ensure this is the last body definition or combine them */
+  background-size: 250% 250%; /* Larger size for smoother animation */
+  animation: gradientAnimation 20s ease infinite; /* Slower, smoother animation */
+}
+
+/* Ensure canvas is responsive and centered */
+.canvas-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 25px;
+    width: 100%;
 }
