@@ -1,16 +1,16 @@
-// content_script.js for PosePal
+// content_script.js for PoseLifter
 
-const POSEPAL_BLUR_STYLE_ID = 'posepal-blur-overlay-style';
-const POSEPAL_BLUR_MESSAGE_ID = 'posepal-blur-message';
+const POSELIFTER_BLUR_STYLE_ID = 'poselifter-blur-overlay-style';
+const POSELIFTER_BLUR_MESSAGE_ID = 'poselifter-blur-message';
 
 function applyBlur() {
     // Avoid applying multiple times
-    if (document.getElementById(POSEPAL_BLUR_STYLE_ID)) return;
+    if (document.getElementById(POSELIFTER_BLUR_STYLE_ID)) return;
 
     const style = document.createElement('style');
-    style.id = POSEPAL_BLUR_STYLE_ID;
+    style.id = POSELIFTER_BLUR_STYLE_ID;
     style.textContent = `
-        body > *:not(#${POSEPAL_BLUR_MESSAGE_ID}) { /* Exclude our message from blur */
+        body > *:not(#${POSELIFTER_BLUR_MESSAGE_ID}) { /* Exclude our message from blur */
             filter: blur(5px) !important;
             transition: filter 0.3s ease-in-out !important;
             pointer-events: none !important; /* Prevent interaction with blurred content */
@@ -20,7 +20,7 @@ function applyBlur() {
     document.head.appendChild(style);
 
     const messageDiv = document.createElement('div');
-    messageDiv.id = POSEPAL_BLUR_MESSAGE_ID;
+    messageDiv.id = POSELIFTER_BLUR_MESSAGE_ID;
     messageDiv.style.position = 'fixed';
     messageDiv.style.top = '50%';
     messageDiv.style.left = '50%';
@@ -32,22 +32,22 @@ function applyBlur() {
     messageDiv.style.zIndex = '2147483647'; // Max z-index
     messageDiv.style.textAlign = 'center';
     messageDiv.style.fontSize = '20px';
-    messageDiv.innerHTML = 'PosePal: Please correct your posture to continue.<br/>Return to the PosePal tab or correct your posture.';
+    messageDiv.innerHTML = 'PoseLifter: Please correct your posture to continue.<br/>Return to the PoseLifter tab or correct your posture.';
     document.body.appendChild(messageDiv);
 
-    console.log("PosePal: Page blurred due to posture.");
+    console.log("PoseLifter: Page blurred due to posture.");
 }
 
 function removeBlur() {
-    const style = document.getElementById(POSEPAL_BLUR_STYLE_ID);
+    const style = document.getElementById(POSELIFTER_BLUR_STYLE_ID);
     if (style) {
         style.remove();
     }
-    const messageDiv = document.getElementById(POSEPAL_BLUR_MESSAGE_ID);
+    const messageDiv = document.getElementById(POSELIFTER_BLUR_MESSAGE_ID);
     if (messageDiv) {
         messageDiv.remove();
     }
-    console.log("PosePal: Page unblurred.");
+    console.log("PoseLifter: Page unblurred.");
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -61,4 +61,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep the message channel open for asynchronous response
 });
 
-console.log("PosePal content script loaded and listener attached.");
+console.log("PoseLifter content script loaded and listener attached.");

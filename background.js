@@ -1,13 +1,13 @@
-console.log("PosePal background script loaded. v3.2 - Immediate Blur Logic");
+console.log("PoseLifter background script loaded. v3.2 - Immediate Blur Logic");
 
 let lastNotificationTime = 0;
 const NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const INITIAL_CALIBRATION_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
 let extensionStartTime = Date.now(); // Timestamp for initial calibration cooldown
-let posePalTabId = null;
+let poseLifterTabId = null;
 let lastKnownPostureIsBad = false;
 
-console.log(`[INIT] posePalTabId at script start: ${posePalTabId}`);
+console.log(`[INIT] poseLifterTabId at script start: ${poseLifterTabId}`);
 
 const appDefaultSettings = {
     enableNotifications: true,
@@ -102,16 +102,16 @@ function openTrackerPage() {
                     return;
                 }
                 if (tab) {
-                    posePalTabId = tab.id;
-                    console.log(`[INFO] openTrackerPage: PosePal tab created with ID: ${posePalTabId}`);
+                    poseLifterTabId = tab.id;
+                    console.log(`[INFO] openTrackerPage: PoseLifter tab created with ID: ${poseLifterTabId}`);
                 } else {
-                    console.error("[ERROR] openTrackerPage: Failed to create PosePal tab.");
+                    console.error("[ERROR] openTrackerPage: Failed to create PoseLifter tab.");
                 }
             });
         } else {
-            posePalTabId = tabs[0].id;
-            console.log(`[INFO] openTrackerPage: PosePal tab found. ID: ${posePalTabId}. Attempting to focus.`);
-            chrome.tabs.update(posePalTabId, { active: true }, (updatedTab) => {
+            poseLifterTabId = tabs[0].id;
+            console.log(`[INFO] openTrackerPage: PoseLifter tab found. ID: ${poseLifterTabId}. Attempting to focus.`);
+            chrome.tabs.update(poseLifterTabId, { active: true }, (updatedTab) => {
                 if (chrome.runtime.lastError) {
                     console.warn("[WARN] openTrackerPage: Error making tab active:", chrome.runtime.lastError.message);
                 } else if (updatedTab) {
@@ -127,20 +127,20 @@ function openTrackerPage() {
 }
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    console.log(`%c[DEBUG] chrome.tabs.onActivated: Active tab ID: ${activeInfo.tabId}. Current posePalTabId: ${posePalTabId}`, "color: blue; font-weight: bold;");
+    console.log(`%c[DEBUG] chrome.tabs.onActivated: Active tab ID: ${activeInfo.tabId}. Current poseLifterTabId: ${poseLifterTabId}`, "color: blue; font-weight: bold;");
 
-    let currentPosePalTabId = posePalTabId;
-    if (!currentPosePalTabId) {
+    let currentPoseLifterTabId = poseLifterTabId;
+    if (!currentPoseLifterTabId) {
         const trackerUrl = chrome.runtime.getURL("index.html");
         try {
             const tabs = await chrome.tabs.query({ url: trackerUrl });
             if (tabs.length > 0) {
-                currentPosePalTabId = tabs[0].id;
-                if (!posePalTabId) posePalTabId = currentPosePalTabId;
-                console.log(`[DEBUG] onActivated: Re-acquired PosePal tab ID: ${currentPosePalTabId}`);
+                currentPoseLifterTabId = tabs[0].id;
+                if (!poseLifterTabId) poseLifterTabId = currentPoseLifterTabId;
+                console.log(`[DEBUG] onActivated: Re-acquired PoseLifter tab ID: ${currentPoseLifterTabId}`);
             }
         } catch (e) {
-            console.error("[ERROR] onActivated: Error during posePalTabId re-acquisition:", e);
+            console.error("[ERROR] onActivated: Error during poseLifterTabId re-acquisition:", e);
         }
     }
 
@@ -154,15 +154,15 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
     const newlyActiveTabId = activeInfo.tabId;
 
-    if (newlyActiveTabId === currentPosePalTabId) {
-        console.log(`[INFO] Switched TO PosePal tab (ID: ${currentPosePalTabId}). Ensuring it is unblurred.`);
-        if (currentPosePalTabId) { // Ensure ID is valid
+    if (newlyActiveTabId === currentPoseLifterTabId) {
+        console.log(`[INFO] Switched TO PoseLifter tab (ID: ${currentPoseLifterTabId}). Ensuring it is unblurred.`);
+        if (currentPoseLifterTabId) { // Ensure ID is valid
             try {
-                await chrome.tabs.sendMessage(currentPosePalTabId, { action: "UNBLUR_PAGE" });
-            } catch (e) { /* console.warn(`[DEBUG] Failed to send UNBLUR_PAGE to PosePal tab ${currentPosePalTabId} on activation:`, e.message); */ }
+                await chrome.tabs.sendMessage(currentPoseLifterTabId, { action: "UNBLUR_PAGE" });
+            } catch (e) { /* console.warn(`[DEBUG] Failed to send UNBLUR_PAGE to PoseLifter tab ${currentPoseLifterTabId} on activation:`, e.message); */ }
         }
     } else {
-        console.log(`[INFO] Switched to non-PosePal tab ${newlyActiveTabId}. LastKnownPostureIsBad: ${lastKnownPostureIsBad}, Blur Enabled: ${settings.enableBlurEffect}`);
+        console.log(`[INFO] Switched to non-PoseLifter tab ${newlyActiveTabId}. LastKnownPostureIsBad: ${lastKnownPostureIsBad}, Blur Enabled: ${settings.enableBlurEffect}`);
         try {
             const tabInfo = await chrome.tabs.get(newlyActiveTabId);
             if (!tabInfo.url || (!tabInfo.url.startsWith('http:') && !tabInfo.url.startsWith('https:'))) {
@@ -186,9 +186,9 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    if (tabId === posePalTabId) {
-        console.log(`[INFO] PosePal tab with ID: ${posePalTabId} was closed.`);
-        posePalTabId = null;
+    if (tabId === poseLifterTabId) {
+        console.log(`[INFO] PoseLifter tab with ID: ${poseLifterTabId} was closed.`);
+        poseLifterTabId = null;
         lastKnownPostureIsBad = false;
         updateBadge("Closed");
     }
@@ -216,10 +216,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     if (now - extensionStartTime > INITIAL_CALIBRATION_COOLDOWN_MS) {
                         if (now - lastNotificationTime > NOTIFICATION_COOLDOWN_MS) {
                             chrome.notifications.create(
-                                `posepal-alert-${Date.now()}`, {
+                                `poselifter-alert-${Date.now()}`, {
                                 type: 'basic',
                                 iconUrl: 'icons/icon128.png',
-                                title: 'PosePal Alert!',
+                                title: 'PoseLifter Alert!',
                                 message: message.messages.join('\\n'),
                                 priority: 2
                             }, (notificationId) => {
@@ -263,8 +263,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     }
 
                     const activeTab = activeTabs[0];
-                    if (activeTab.id === posePalTabId) {
-                        console.log("[DEBUG] Active tab is PosePal tab, skipping blur/unblur from POSTURE_STATUS.");
+                    if (activeTab.id === poseLifterTabId) {
+                        console.log("[DEBUG] Active tab is PoseLifter tab, skipping blur/unblur from POSTURE_STATUS.");
                         return;
                     }
                     if (!activeTab.url || (!activeTab.url.startsWith('http:') && !activeTab.url.startsWith('https:'))) {
@@ -285,14 +285,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
         });
     } else if (message.action === "REQUEST_INITIAL_STATE") {
-        console.log(`[DEBUG] Received REQUEST_INITIAL_STATE from tab ${senderTabId}. Current global posePalTabId: ${posePalTabId}`);
+        console.log(`[DEBUG] Received REQUEST_INITIAL_STATE from tab ${senderTabId}. Current global poseLifterTabId: ${poseLifterTabId}`);
         if (sender.tab && sender.tab.url === chrome.runtime.getURL("index.html")) {
-            if (!posePalTabId || posePalTabId !== sender.tab.id) {
-                 posePalTabId = sender.tab.id;
-                 console.log(`[INFO] PosePal tab ID confirmed/updated to ${posePalTabId} from REQUEST_INITIAL_STATE.`);
+            if (!poseLifterTabId || poseLifterTabId !== sender.tab.id) {
+                 poseLifterTabId = sender.tab.id;
+                 console.log(`[INFO] PoseLifter tab ID confirmed/updated to ${poseLifterTabId} from REQUEST_INITIAL_STATE.`);
             }
         }
-        sendResponse({ posePalTabId: posePalTabId, lastKnownPostureIsBad: lastKnownPostureIsBad });
+        sendResponse({ poseLifterTabId: poseLifterTabId, lastKnownPostureIsBad: lastKnownPostureIsBad });
         return true;
     }
     return true;
@@ -325,21 +325,21 @@ chrome.action.onClicked.addListener((tab) => {
     // Intentionally does nothing as per requirements.
 });
 
-console.log("[INIT] PosePal background script (v3.2 - Immediate Blur Logic) fully parsed.");
+console.log("[INIT] PoseLifter background script (v3.2 - Immediate Blur Logic) fully parsed.");
 
-// Initial attempt to find PosePal tab
+// Initial attempt to find PoseLifter tab
 (async () => {
-    console.log("[INIT] Attempting to find PosePal tab immediately after script load/restart.");
+    console.log("[INIT] Attempting to find PoseLifter tab immediately after script load/restart.");
     const trackerUrl = chrome.runtime.getURL("index.html");
     try {
         const tabs = await chrome.tabs.query({ url: trackerUrl });
         if (tabs.length > 0) {
-            if (posePalTabId !== tabs[0].id) {
-                posePalTabId = tabs[0].id;
-                console.log(`[INIT] Found/Updated PosePal tab ID: ${posePalTabId} on initial query.`);
+            if (poseLifterTabId !== tabs[0].id) {
+                poseLifterTabId = tabs[0].id;
+                console.log(`[INIT] Found/Updated PoseLifter tab ID: ${poseLifterTabId} on initial query.`);
             }
         } else {
-            console.log("[INIT] PosePal tab not found on initial query.");
+            console.log("[INIT] PoseLifter tab not found on initial query.");
         }
     } catch (e) {
         console.error("[INIT] Error during initial tab query:", e);

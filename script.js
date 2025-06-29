@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Calibrate button (calibrateButton) not found.");
     }
 
-    // Inform background script about the PosePal tab and request initial state
+    // Inform background script about the PoseLifter tab and request initial state
     if (chrome.runtime && chrome.runtime.sendMessage) {
         console.log("Sending REQUEST_INITIAL_STATE to background script.");
         chrome.runtime.sendMessage({ action: "REQUEST_INITIAL_STATE" }, (response) => {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Error sending REQUEST_INITIAL_STATE or receiving response:", chrome.runtime.lastError.message);
             } else if (response) {
                 console.log("Received response for REQUEST_INITIAL_STATE:", response);
-                // You can use response.posePalTabId and response.lastKnownPostureIsBad if needed here
+                // You can use response.poseLifterTabId and response.lastKnownPostureIsBad if needed here
             } else {
                 console.warn("No response received for REQUEST_INITIAL_STATE.");
             }
@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Function to load settings from chrome.storage.sync
-function loadPosePalSettings() {
-    // Define default values for all settings PosePal uses
+function loadPoseLifterSettings() {
+    // Define default values for all settings PoseLifter uses
     const defaultValues = {
         headTiltAngleThreshold: 27, 
         forwardHeadAngleThreshold: 40, // Adjusted
@@ -183,7 +183,7 @@ function loadPosePalSettings() {
             postureSensitivityFactor = Math.max(0.5, Math.min(1.5, postureSensitivityFactor));
 
 
-            console.log('PosePal settings loaded (ERROR FALLBACK) in script.js:', {
+            console.log('PoseLifter settings loaded (ERROR FALLBACK) in script.js:', {
                 enableNotifications,
                 autoPipEnabled,
                 enableBlurEffect: items.enableBlurEffect, // ensure this is logged
@@ -208,7 +208,7 @@ function loadPosePalSettings() {
         postureSensitivityFactor = 1.0 - ( (items.postureSensitivity - 50) / 50 ) * 0.5; // Example mapping
         postureSensitivityFactor = Math.max(0.5, Math.min(1.5, postureSensitivityFactor));
         
-        console.log('PosePal settings loaded/applied in script.js:', {
+        console.log('PoseLifter settings loaded/applied in script.js:', {
             enableNotifications,
             autoPipEnabled,
             enableBlurEffect: items.enableBlurEffect,
@@ -223,12 +223,12 @@ function loadPosePalSettings() {
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'sync') {
         console.log("Settings changed, reloading in script.js:", changes);
-        loadPosePalSettings(); // Reload all settings if any change
+        loadPoseLifterSettings(); // Reload all settings if any change
     }
 });
 
 // Initial load of settings
-loadPosePalSettings();
+loadPoseLifterSettings();
 
 document.addEventListener('visibilitychange', async () => { // Made async
     console.log(`script.js: Visibility changed to: ${document.visibilityState}. Auto PiP enabled: ${autoPipEnabled}.`);
@@ -268,12 +268,12 @@ document.addEventListener('visibilitychange', async () => { // Made async
                 .catch(error => {
                     console.error("script.js: Error entering PiP (canvas stream) on tab hidden (interaction occurred):", error);
                     if (error.name === 'NotAllowedError') {
-                        console.warn("script.js: Automatic PiP (canvas stream) failed. Browser may require a fresh user interaction. Click PiP button on PosePal tab to re-enable for next switch.");
+                        console.warn("script.js: Automatic PiP (canvas stream) failed. Browser may require a fresh user interaction. Click PiP button on PoseLifter tab to re-enable for next switch.");
                         pipInteractionOccurred = false; // Reset flag, requiring new user gesture
                     }
                 });
         } else if (autoPipEnabled && !pipInteractionOccurred) {
-            console.warn("script.js: Auto PiP enabled, but requires a manual PiP toggle first (or again if a previous auto-attempt failed). Please click the PiP button on the PosePal tab.");
+            console.warn("script.js: Auto PiP enabled, but requires a manual PiP toggle first (or again if a previous auto-attempt failed). Please click the PiP button on the PoseLifter tab.");
         } else {
             console.log("script.js: Conditions NOT met for entering PiP (hidden).", {autoPipEnabled, pipActive: document.pictureInPictureElement === pipVideoElement, pipInteractionOccurred});
         }
