@@ -1,3 +1,4 @@
+let posture = "Neutral";
 const videoElement = document.getElementById('video');
 const canvasElement = document.getElementById('output');
 const canvasCtx = canvasElement.getContext('2d');
@@ -102,9 +103,21 @@ function onResults(results) {
   if (slouching) {
     statusDisplay.textContent = " Bad Posture";
     statusDisplay.className = 'bad-posture';
+    // Send message to extension
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture" });
+    } else {
+      // console.log("Not in extension context. Status: Bad Posture");
+    }
   } else {
     statusDisplay.textContent = " Good Posture";
     statusDisplay.className = 'good-posture';
+    // Send message to extension
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Good Posture" });
+    } else {
+      // console.log("Not in extension context. Status: Good Posture");
+    }
   }
 
   canvasCtx.restore();
