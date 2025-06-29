@@ -199,7 +199,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log(`[DEBUG] Message received in background:`, message, `from sender tab ID: ${senderTabId}`);
 
     if (message.type === "POSTURE_STATUS") {
-        lastKnownPostureIsBad = (message.status === "Bad Posture");
+        lastKnownPostureIsBad = (message.status === "BAD");
         console.log(`[INFO] Posture status updated: ${message.status}. lastKnownPostureIsBad: ${lastKnownPostureIsBad}`);
         updateBadge(message.status);
 
@@ -242,10 +242,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             // Immediate Blur/Unblur Logic
             if (settings.enableBlurEffect) {
                 chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
-                    if (chrome.runtime.lastError || !activeTabs || activeTabs.length === 0) {
-                        console.error("[ERROR] onMessage/POSTURE_STATUS: Error querying active tabs for blur/unblur:", chrome.runtime.lastError?.message);
+                                        if (chrome.runtime.lastError) {
+                        // Log the entire lastError object for more details
+                        console.error("[ERROR] onMessage/POSTURE_STATUS: API Error querying active tabs. Full error object:", JSON.stringify(chrome.runtime.lastError));
+                        // Also log its message property, even if it might be undefined
+                        console.error("[ERROR] onMessage/POSTURE_STATUS: Error message property (if any):", chrome.runtime.lastError.message);
                         return;
                     }
+                    if (!activeTabs) {
+                        // This case should ideally be caught by chrome.runtime.lastError,
+                        // but good to have a separate log if it's not.
+                        console.error("[ERROR] onMessage/POSTURE_STATUS: activeTabs query returned null or undefined, but no lastError was set.");
+                        return;
+                    }
+                    if (activeTabs.length === 0) {
+                        // This means the query succeeded but found no matching tabs.
+                        // This can happen if no window is focused, or the focused window has no active tab (e.g. devtools).
+                        console.warn("[WARN] onMessage/POSTURE_STATUS: No active tab found in the current window (activeTabs.length is 0). Cannot blur/unblur. This might happen if the window is not focused or has no active tab.");
+                        return;
+                    }
+
                     const activeTab = activeTabs[0];
                     if (activeTab.id === posePalTabId) {
                         console.log("[DEBUG] Active tab is PosePal tab, skipping blur/unblur from POSTURE_STATUS.");

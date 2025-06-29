@@ -7,6 +7,7 @@ let autoPipEnabled = true; // Local cache of the setting, default true
 let wasAutoPiP = false; // Flag to track if PiP was entered automatically by this script
 let pipInteractionOccurred = false; // NEW: Flag to track if user has interacted with PiP controls
 
+
 // NEW: Default thresholds for angle-based checks (in degrees)
 let headTiltAngleThreshold = 25; // Increased from 20
 let forwardHeadAngleThreshold = 40; // Adjusted from 27/22
@@ -366,17 +367,26 @@ function calibratePosture() {
 function onResults(results) {
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height); // Re-enabled to show video feed on canvas for debugging
+  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+  // Draw skeleton during calibration for visual feedback
+  if (isCalibrating && results.poseLandmarks) {
+    if (window.drawConnectors && window.drawLandmarks) {
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: 'rgba(0, 255, 0, 0.7)', lineWidth: 3 });
+        drawLandmarks(canvasCtx, results.poseLandmarks, { color: 'rgba(255, 0, 0, 0.7)', lineWidth: 2, radius: 3 });
+    } else {
+        console.warn("script.js: MediaPipe drawing_utils (drawConnectors, drawLandmarks) not available globally. Skeleton will not be drawn during calibration. Ensure camera_utils.js or equivalent is loaded and provides these functions on the window object.");
+    }
+  }
 
   if (!results.poseLandmarks) {
-    // Draw "No pose detected" on canvas for PiP
     canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     canvasCtx.fillRect(0, canvasElement.height - 40, canvasElement.width, 40);
     canvasCtx.fillStyle = 'white';
     canvasCtx.font = '16px Arial';
     canvasCtx.textAlign = 'center';
     canvasCtx.fillText("No pose detected. Ensure you are visible.", canvasElement.width / 2, canvasElement.height - 15);
-    canvasCtx.textAlign = 'left'; // Reset
+    canvasCtx.textAlign = 'left';
 
     if (statusDisplay) {
         statusDisplay.textContent = "No pose detected. Ensure you are visible.";
@@ -385,7 +395,6 @@ function onResults(results) {
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
         chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "NO_POSE", messages: [] });
     }
-    // Update pipVideoElement stream
     if (pipVideoElement && canvasElement.captureStream && (!pipVideoElement.srcObject || pipVideoElement.srcObject.getVideoTracks()[0]?.readyState === 'ended')) {
         pipVideoElement.srcObject = canvasElement.captureStream(25);
         pipVideoElement.play().catch(e => console.warn("pipVideo play error on no pose:", e));
@@ -395,31 +404,36 @@ function onResults(results) {
   }
 
   const lm = results.poseLandmarks;
-  const nose = lm[0]; // PoseLandmarker.PoseLandmarkIds.NOSE
-  const leftEar = lm[7]; // PoseLandmarker.PoseLandmarkIds.LEFT_EAR
-  const rightEar = lm[8]; // PoseLandmarker.PoseLandmarkIds.RIGHT_EAR
-  const leftShoulder = lm[11]; // PoseLandmarker.PoseLandmarkIds.LEFT_SHOULDER
-  const rightShoulder = lm[12]; // PoseLandmarker.PoseLandmarkIds.RIGHT_SHOULDER
+  const nose = lm[0];
+  const leftEar = lm[7];
+  const rightEar = lm[8];
+  const leftShoulder = lm[11];
+  const rightShoulder = lm[12];
+  const leftHip = lm[23]; // Added for quality check
+  const rightHip = lm[24]; // Added for quality check
+
   
-  // Check if all essential landmarks are detected and sufficiently visible
-  const requiredLandmarks = [nose, leftEar, rightEar, leftShoulder, rightShoulder];
-  let allLandmarksValid = true;
-  for (const landmark of requiredLandmarks) {
-    if (!landmark || (landmark.visibility !== undefined && landmark.visibility < 0.5)) {
-      allLandmarksValid = false;
+
+  // Landmarks strictly required to proceed with any processing (calibration or posture check).
+  // Hips are removed from this strict requirement for initial validation.
+  // leftHip and rightHip (defined above) are still used for the quality check later if visible.
+  const essentialUpperBodyLandmarks = [nose, leftEar, rightEar, leftShoulder, rightShoulder];
+  let allEssentialUpperBodyLandmarksValid = true;
+  for (const landmark of essentialUpperBodyLandmarks) {
+    if (!landmark || (landmark.visibility !== undefined && landmark.visibility < 0.5)) { // Visibility threshold is 0.5
+      allEssentialUpperBodyLandmarksValid = false;
       break;
     }
   }
 
-  if (!allLandmarksValid) {
-    // Draw "Partial or unclear pose" on canvas for PiP
+  if (!allEssentialUpperBodyLandmarksValid) { // Check is now based on essential upper body landmarks
     canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     canvasCtx.fillRect(0, canvasElement.height - 40, canvasElement.width, 40);
     canvasCtx.fillStyle = 'white';
     canvasCtx.font = '16px Arial';
     canvasCtx.textAlign = 'center';
     canvasCtx.fillText("Partial or unclear pose. Adjust position.", canvasElement.width / 2, canvasElement.height - 15);
-    canvasCtx.textAlign = 'left'; // Reset
+    canvasCtx.textAlign = 'left';
 
     if (statusDisplay) {
         statusDisplay.textContent = "Partial or unclear pose. Adjust visibility/position.";
@@ -428,7 +442,6 @@ function onResults(results) {
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
         chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "PARTIAL_POSE", messages: [] });
     }
-    // Update pipVideoElement stream
     if (pipVideoElement && canvasElement.captureStream && (!pipVideoElement.srcObject || pipVideoElement.srcObject.getVideoTracks()[0]?.readyState === 'ended')) {
         pipVideoElement.srcObject = canvasElement.captureStream(25);
         pipVideoElement.play().catch(e => console.warn("pipVideo play error on partial pose:", e));
@@ -437,200 +450,235 @@ function onResults(results) {
     return;
   }
 
-  // Calculate current posture metrics
   const currentMetrics = {};
-  // 1. Vertical Neck Height (Average)
-  const dyLeftNeck = leftShoulder.y - leftEar.y; 
+  const dyLeftNeck = leftShoulder.y - leftEar.y;
   const dyRightNeck = rightShoulder.y - rightEar.y;
   currentMetrics.neckHeight = (dyLeftNeck + dyRightNeck) / 2;
-
-  // 2. Head Tilt (Side-to-Side)
   const earDiffX = rightEar.x - leftEar.x;
   const earDiffY = rightEar.y - leftEar.y;
   currentMetrics.headTilt = Math.atan2(earDiffY, earDiffX) * (180 / Math.PI);
-
-  // 3. Forward Head Posture
   const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
   const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
   const headOffsetH = nose.x - midShoulderX;
   const headOffsetV = nose.y - midShoulderY;
   currentMetrics.forwardHead = Math.atan2(headOffsetH, -headOffsetV) * (180 / Math.PI);
-  
-  // 4. Shoulder Levelness
   const shoulderDiffX = rightShoulder.x - leftShoulder.x;
   const shoulderDiffY = rightShoulder.y - leftShoulder.y;
   currentMetrics.shoulderTilt = Math.atan2(shoulderDiffY, shoulderDiffX) * (180 / Math.PI);
 
-  // NEW: Handle Calibration if isCalibrating is true
   if (isCalibrating) {
-    calibratedMetrics = { ...currentMetrics }; // Store a copy
+    calibratedMetrics = { ...currentMetrics };
+
+    let visibleLandmarks = 0;
+    const landmarksForQualityCheck = [nose, leftEar, rightEar, leftShoulder, rightShoulder, leftHip, rightHip];
+    let qualityMessageText = "Quality: ";
+    const totalQualityLandmarks = landmarksForQualityCheck.length;
+
+    for (const landmark of landmarksForQualityCheck) {
+        if (landmark && landmark.visibility !== undefined && landmark.visibility >= 0.65) {
+            visibleLandmarks++;
+        }
+    }
+
+    if (visibleLandmarks === totalQualityLandmarks) {
+        qualityMessageText += "Excellent!";
+    } else if (visibleLandmarks >= totalQualityLandmarks - 1) {
+        qualityMessageText += "Good.";
+    } else if (visibleLandmarks >= totalQualityLandmarks - 3) {
+        qualityMessageText += "Fair. Try to be more centered and well-lit.";
+    } else {
+        qualityMessageText += "Poor. Ensure you are fully visible and try again.";
+    }
+
     chrome.storage.sync.set({ calibratedMetrics: calibratedMetrics }, () => {
         if (chrome.runtime.lastError) {
             console.error("Error saving calibrated metrics:", chrome.runtime.lastError.message);
             if (statusDisplay) {
-                statusDisplay.textContent = "Error saving calibration. Please try again.";
+                statusDisplay.textContent = "Calibration failed to save. Try again.";
                 statusDisplay.className = 'bad-posture';
             }
         } else {
             console.log("Posture calibrated and saved:", calibratedMetrics);
             if (statusDisplay) {
-                statusDisplay.textContent = "Posture Calibrated Successfully!";
-                statusDisplay.className = 'good-posture'; 
+                statusDisplay.textContent = "Posture Calibrated! " + qualityMessageText;
+                statusDisplay.className = 'good-posture';
             }
         }
     });
-    isCalibrating = false; // Reset flag
+    isCalibrating = false;
 
-    // Draw "Calibrated" on canvas for PiP
-    canvasCtx.fillStyle = 'rgba(0, 128, 0, 0.7)'; // Greenish background
-    canvasCtx.fillRect(0, canvasElement.height - 40, canvasElement.width, 40);
+    canvasCtx.fillStyle = 'rgba(0, 128, 0, 0.8)';
+    canvasCtx.fillRect(0, canvasElement.height - 60, canvasElement.width, 60);
     canvasCtx.fillStyle = 'white';
-    canvasCtx.font = '16px Arial';
+    canvasCtx.font = 'bold 16px Arial';
     canvasCtx.textAlign = 'center';
-    canvasCtx.fillText("Posture Calibrated Successfully!", canvasElement.width / 2, canvasElement.height - 15);
-    canvasCtx.textAlign = 'left'; // Reset
+    canvasCtx.fillText("Posture Calibrated!", canvasElement.width / 2, canvasElement.height - 38);
+    canvasCtx.font = '14px Arial';
+    canvasCtx.fillText(qualityMessageText, canvasElement.width / 2, canvasElement.height - 17);
+    canvasCtx.textAlign = 'left';
 
-    // Update pipVideoElement stream
     if (pipVideoElement && canvasElement.captureStream && (!pipVideoElement.srcObject || pipVideoElement.srcObject.getVideoTracks()[0]?.readyState === 'ended')) {
         pipVideoElement.srcObject = canvasElement.captureStream(25);
         pipVideoElement.play().catch(e => console.warn("pipVideo play error on calibration:", e));
     }
-    canvasCtx.restore(); // Restore canvas before returning
-    return; // Exit after calibration attempt, next frame will use new metrics
+    canvasCtx.restore();
+    return;
   }
 
   let feedbackMessages = [];
   let postureIsGood = true;
 
   if (calibratedMetrics) {
-    const headTiltDelta = Math.abs(currentMetrics.headTilt - calibratedMetrics.headTilt);
-    const headTiltThreshold = Math.max(10, maxHeadTiltDeviation * postureSensitivityFactor); // Never less than 10 deg
-    if (headTiltDelta > headTiltThreshold) {
-        feedbackMessages.push(`Level head.`);
+    const headTiltDifference = currentMetrics.headTilt - calibratedMetrics.headTilt;
+    const effectiveHeadTiltDeviation = Math.max(8, maxHeadTiltDeviation * postureSensitivityFactor);
+    if (headTiltDifference > effectiveHeadTiltDeviation) {
+        feedbackMessages.push("Head tilted right. Level by tilting left.");
+        postureIsGood = false;
+    } else if (headTiltDifference < -effectiveHeadTiltDeviation) {
+        feedbackMessages.push("Head tilted left. Level by tilting right.");
         postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.forwardHead - calibratedMetrics.forwardHead) > (maxForwardHeadDeviation * postureSensitivityFactor)) {
-        feedbackMessages.push(`Align head.`);
+
+    const forwardHeadDifference = currentMetrics.forwardHead - calibratedMetrics.forwardHead;
+    const effectiveForwardHeadDeviation = maxForwardHeadDeviation * postureSensitivityFactor;
+    if (forwardHeadDifference > effectiveForwardHeadDeviation) {
+        feedbackMessages.push("Head forward. Tuck chin in slightly.");
+        postureIsGood = false;
+    } else if (forwardHeadDifference < -(effectiveForwardHeadDeviation * 0.75)) {
+        feedbackMessages.push("Leaning back. Sit upright.");
         postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.shoulderTilt - calibratedMetrics.shoulderTilt) > (maxShoulderTiltDeviation * postureSensitivityFactor)) {
-        feedbackMessages.push(`Level shoulders.`);
+
+    const shoulderTiltDifference = currentMetrics.shoulderTilt - calibratedMetrics.shoulderTilt;
+    const effectiveShoulderTiltDeviation = maxShoulderTiltDeviation * postureSensitivityFactor;
+    if (shoulderTiltDifference > effectiveShoulderTiltDeviation) {
+        feedbackMessages.push("Left shoulder high or right shoulder low. Level them.");
+        postureIsGood = false;
+    } else if (shoulderTiltDifference < -effectiveShoulderTiltDeviation) {
+        feedbackMessages.push("Right shoulder high or left shoulder low. Level them.");
         postureIsGood = false;
     }
+    
     const effectiveNeckHeightRatioDeviation = neckHeightRatioDeviation * postureSensitivityFactor;
     if (currentMetrics.neckHeight < (calibratedMetrics.neckHeight - effectiveNeckHeightRatioDeviation)) {
-        feedbackMessages.push(`Sit up straighter.`);
+        feedbackMessages.push("Slouching (neck short). Sit up straighter, elongate neck.");
         postureIsGood = false;
     }
-} else {
-    const headTiltDelta = Math.abs(currentMetrics.headTilt);
-    const headTiltThreshold = Math.max(10, headTiltAngleThreshold * postureSensitivityFactor); // Never less than 10 deg
-    if (headTiltDelta > headTiltThreshold) {
-        feedbackMessages.push(`Level your head.`);
+  } else { // Not calibrated - use absolute thresholds
+    const effectiveHeadTiltThreshold = Math.max(10, headTiltAngleThreshold * postureSensitivityFactor);
+    if (currentMetrics.headTilt > effectiveHeadTiltThreshold) {
+        feedbackMessages.push("Head tilted too far right. Level your head.");
+        postureIsGood = false;
+    } else if (currentMetrics.headTilt < -effectiveHeadTiltThreshold) {
+        feedbackMessages.push("Head tilted too far left. Level your head.");
         postureIsGood = false;
     }
-    const effectiveMinVerticalNeckHeight = minVerticalNeckHeight / postureSensitivityFactor;
-    if (currentMetrics.neckHeight < effectiveMinVerticalNeckHeight) {
-        feedbackMessages.push("Sit up straighter.");
+
+    const effectiveForwardHeadThreshold = forwardHeadAngleThreshold * postureSensitivityFactor;
+    if (currentMetrics.forwardHead > effectiveForwardHeadThreshold) {
+        feedbackMessages.push("Head too far forward. Tuck chin in.");
+        postureIsGood = false;
+    } else if (currentMetrics.forwardHead < -(effectiveForwardHeadThreshold * 0.5)) {
+        feedbackMessages.push("Leaning back too much. Sit upright.");
         postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.headTilt) > (headTiltAngleThreshold * postureSensitivityFactor)) {
-        feedbackMessages.push(`Level your head.`);
+
+    const effectiveShoulderTiltThreshold = shoulderTiltAngleThreshold * postureSensitivityFactor;
+    if (currentMetrics.shoulderTilt > effectiveShoulderTiltThreshold) {
+        feedbackMessages.push("Left shoulder is too high (or right too low). Level shoulders.");
+        postureIsGood = false;
+    } else if (currentMetrics.shoulderTilt < -effectiveShoulderTiltThreshold) {
+        feedbackMessages.push("Right shoulder is too high (or left too low). Level shoulders.");
         postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.forwardHead) > (forwardHeadAngleThreshold * postureSensitivityFactor)) {
-        feedbackMessages.push("Align your head (pull back).");
+
+    if (currentMetrics.neckHeight < (minVerticalNeckHeight / postureSensitivityFactor)) {
+        feedbackMessages.push("Slouching (neck short). Sit up straighter.");
         postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.shoulderTilt) > (shoulderTiltAngleThreshold * postureSensitivityFactor)) {
-        feedbackMessages.push("Level your shoulders.");
-        postureIsGood = false;
-    }
-}
+  }
   
-  // --- Debounce/Grace Period Logic ---
   const now = Date.now();
   if (postureIsGood !== pendingPostureIsGood) {
-    // Posture state changed, start grace period
     pendingPostureIsGood = postureIsGood;
     postureStateChangedAt = now;
   }
-  // Only update UI if state is stable for grace period
+
   let showPostureIsGood = lastPostureIsGood;
   if (pendingPostureIsGood !== lastPostureIsGood && (now - postureStateChangedAt) >= POSTURE_GRACE_PERIOD_MS) {
+    showPostureIsGood = pendingPostureIsGood;
     lastPostureIsGood = pendingPostureIsGood;
-    showPostureIsGood = lastPostureIsGood;
+    postureStateChangedAt = now; // Reset timestamp for the new stable state
+  } else if (pendingPostureIsGood === lastPostureIsGood) {
+    // If current assessment matches stable state, reflect it immediately (e.g. good -> good)
+    showPostureIsGood = pendingPostureIsGood;
   }
+  // If grace period is active for a change, showPostureIsGood remains lastPostureIsGood
 
-  // Update statusDisplay on the main page
   if (statusDisplay) {
-      let pageMessage = "";
-      if (!showPostureIsGood) {
-          pageMessage = feedbackMessages.join(" ");
-          statusDisplay.className = 'bad-posture';
-      } else {
-          pageMessage = "Good Posture!";
-          statusDisplay.className = 'good-posture';
+    if (showPostureIsGood) {
+      statusDisplay.textContent = "Good Posture";
+      statusDisplay.className = 'good-posture';
+      // Draw "Good Posture" on canvas for PiP
+      canvasCtx.fillStyle = 'rgba(0, 128, 0, 0.7)'; // Greenish background
+      canvasCtx.fillRect(0, canvasElement.height - 40, canvasElement.width, 40);
+      canvasCtx.fillStyle = 'white';
+      canvasCtx.font = '16px Arial';
+      canvasCtx.textAlign = 'center';
+      canvasCtx.fillText("Good Posture", canvasElement.width / 2, canvasElement.height - 15);
+      canvasCtx.textAlign = 'left'; // Reset
+    } else {
+      statusDisplay.textContent = "Bad Posture: " + (feedbackMessages.join(', ') || "Adjust posture.");
+      statusDisplay.className = 'bad-posture';
+      // Draw feedback messages on canvas for PiP
+      canvasCtx.fillStyle = 'rgba(255, 0, 0, 0.7)'; // Reddish background
+      canvasCtx.fillRect(0, canvasElement.height - 60, canvasElement.width, 60); // Make taller for messages
+      canvasCtx.fillStyle = 'white';
+      canvasCtx.font = 'bold 14px Arial';
+      canvasCtx.textAlign = 'center';
+      const messageToShow = feedbackMessages.length > 0 ? feedbackMessages.join(', ') : "Adjust Posture";
+      // Simple text wrapping attempt
+      const maxLineWidth = canvasElement.width - 20;
+      const words = messageToShow.split(' ');
+      let line = '';
+      let yPos = canvasElement.height - 40; // Start position for first line
+
+      for(let n = 0; n < words.length; n++) {
+          let testLine = line + words[n] + ' ';
+          let metrics = canvasCtx.measureText(testLine);
+          let testWidth = metrics.width;
+          if (testWidth > maxLineWidth && n > 0) {
+              canvasCtx.fillText(line, canvasElement.width / 2, yPos);
+              line = words[n] + ' ';
+              yPos += 18; // Move to next line
+              if (yPos > canvasElement.height - 10) break; // Avoid drawing off canvas
+          } else {
+              line = testLine;
+          }
       }
-      if (!calibratedMetrics) {
-          pageMessage += (feedbackMessages.length > 0 ? " " : "") + "(Consider calibrating 🎯 for personalized tips)";
-      }
-      statusDisplay.textContent = pageMessage;
-  }
-
-  // Draw feedback messages on the canvas for PiP
-  let pipTipMessage = "";
-  if (!showPostureIsGood) {
-      pipTipMessage = feedbackMessages.length > 0 ? feedbackMessages[0] : "Adjust posture"; // Show first simplified tip or generic
-      canvasCtx.fillStyle = 'rgba(220, 53, 69, 0.85)'; // Updated bad posture PiP bar color (Bootstrap danger-like)
-  } else {
-      pipTipMessage = "Good Posture!";
-      canvasCtx.fillStyle = 'rgba(40, 167, 69, 0.85)'; // Updated good posture PiP bar color (Bootstrap success-like)
-  }
-  
-  let calibrationPipMessage = "";
-  if (!calibratedMetrics) {
-      calibrationPipMessage = "Tip: Calibrate on main page 🎯";
-  }
-  
-  const textPadding = 10;
-  // Increased bar height: base 45px, +15px if calibration message is also shown
-  const barHeight = calibrationPipMessage ? 60 : 45; 
-  const mainTipY = canvasElement.height - (barHeight / 2) + (calibrationPipMessage ? -9 : 6); // Adjusted Y for new bar height & potential second line
-  const calibTipY = canvasElement.height - 18; // Position for calibration tip line
-
-  // Draw background bar
-  canvasCtx.fillRect(0, canvasElement.height - barHeight, canvasElement.width, barHeight);
-  
-  canvasCtx.fillStyle = 'white';
-  canvasCtx.font = 'bold 19px Roboto, Arial'; // Slightly larger main tip font
-  canvasCtx.textAlign = 'center';
-  canvasCtx.fillText(pipTipMessage, canvasElement.width / 2, mainTipY);
-
-  if (calibrationPipMessage) {
-      canvasCtx.font = '15px Roboto, Arial'; // Slightly larger calibration tip font
-      canvasCtx.fillText(calibrationPipMessage, canvasElement.width / 2, calibTipY);
-  }
-
-  canvasCtx.textAlign = 'left'; // Reset
-
-  // Send status to background script unconditionally for badge and blur logic
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      if (feedbackMessages.length > 0) {
-          chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture", messages: feedbackMessages });
-      } else {
-          chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Good Posture", messages: [] });
-      }
-  }
-
-  // Ensure the pipVideoElement is streaming the updated canvas
-  if (pipVideoElement && canvasElement.captureStream) {
-    // Check if the stream is not set, or if the track is ended (can happen if canvas is resized or hidden/reshown)
-    const tracks = pipVideoElement.srcObject ? pipVideoElement.srcObject.getVideoTracks() : [];
-    if (!pipVideoElement.srcObject || tracks.length === 0 || tracks[0].readyState === 'ended') {
-        pipVideoElement.srcObject = canvasElement.captureStream(25); // FPS
-        pipVideoElement.play().catch(e => console.warn("pipVideo play error in onResults:", e));
+      canvasCtx.fillText(line, canvasElement.width / 2, yPos);
+      canvasCtx.textAlign = 'left'; // Reset
     }
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({
+      type: "POSTURE_STATUS",
+      status: showPostureIsGood ? "GOOD" : "BAD",
+      messages: feedbackMessages
+    });
+  }
+
+  // Update pipVideoElement stream (ensure it's always updated after drawing)
+  if (pipVideoElement && canvasElement.captureStream) {
+      if (!pipVideoElement.srcObject || pipVideoElement.srcObject.getVideoTracks().length === 0 || pipVideoElement.srcObject.getVideoTracks()[0].readyState === 'ended') {
+          try {
+              pipVideoElement.srcObject = canvasElement.captureStream(25); // 25 FPS
+              pipVideoElement.play().catch(e => console.warn("pipVideo play error in onResults update:", e));
+          } catch (e) {
+              console.error("Error setting canvas stream to pipVideoElement:", e);
+          }
+      }
   }
   canvasCtx.restore();
 }
