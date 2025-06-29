@@ -1,43 +1,55 @@
 let posture = "Neutral";
-const videoElement = document.getElementById('video');
-const canvasElement = document.getElementById('output');
-const canvasCtx = canvasElement.getContext('2d');
-const statusDisplay = document.getElementById('status');
 
-// Initialize MediaPipe Pose
-const pose = new Pose({
-  locateFile: (file) => {
-    // Adjusted path to look directly in mediapipe.libs
-    return `mediapipe.libs/${file}`;
-  }
-});
-pose.setOptions({
-  modelComplexity: 1,
-  smoothLandmarks: true,
-  enableSegmentation: false,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5,
-});
+// Declare variables that will be assigned when DOM is ready
+let videoElement, canvasElement, canvasCtx, statusDisplay, pose, camera;
 
-pose.onResults(onResults);
+document.addEventListener('DOMContentLoaded', () => {
+    videoElement = document.getElementById('video');
+    canvasElement = document.getElementById('output');
+    canvasCtx = canvasElement.getContext('2d');
+    statusDisplay = document.getElementById('status');
 
-// Webcam setup
-const camera = new Camera(videoElement, {
-  onFrame: async () => {
-    await pose.send({ image: videoElement });
-  },
-  width: 640,
-  height: 480,
-});
-camera.start();
+    // Initialize MediaPipe Pose
+    pose = new Pose({
+      locateFile: (file) => {
+        // Adjusted path to look directly in mediapipe.libs
+        return `mediapipe.libs/${file}`;
+      }
+    });
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+    pose.onResults(onResults); // onResults function is defined below
 
-// Event listener for the settings button
-document.getElementById('openSettingsButton').addEventListener('click', () => {
-    if (chrome.runtime.openOptionsPage) {
-        chrome.runtime.openOptionsPage();
+    // Webcam setup
+    camera = new Camera(videoElement, {
+      onFrame: async () => {
+        if (videoElement && videoElement.readyState >= 2) { // Ensure video is ready
+          await pose.send({ image: videoElement });
+        }
+      },
+      width: 640,
+      height: 480,
+    });
+    camera.start();
+
+    // Event listener for the settings button
+    const openSettingsButton = document.getElementById('openSettingsButton');
+    if (openSettingsButton) {
+        openSettingsButton.addEventListener('click', () => {
+            if (chrome.runtime.openOptionsPage) {
+                chrome.runtime.openOptionsPage();
+            } else {
+                // Fallback for older Chrome versions or if the function is not available
+                window.open(chrome.runtime.getURL('settings.html'));
+            }
+        });
     } else {
-        // Fallback for older Chrome versions or if the function is not available
-        window.open(chrome.runtime.getURL('settings.html'));
+        console.error("Settings button (openSettingsButton) not found.");
     }
 });
 
