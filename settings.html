@@ -112,23 +112,23 @@
         </div>
 
         <div class="setting">
-            <label for="horizontalTiltThreshold">Horizontal Tilt Threshold <span>(0.01-0.3)</span>:</label>
-            <input type="number" id="horizontalTiltThreshold" name="horizontalTiltThreshold" step="0.01" min="0.01" max="0.3">
+            <label for="headTiltAngleThreshold">Head Tilt Angle Threshold (degrees) <span>(0-45)</span>:</label>
+            <input type="number" id="headTiltAngleThreshold" name="headTiltAngleThreshold" step="1" min="0" max="45">
         </div>
 
         <div class="setting">
-            <label for="minVerticalNeckHeight">Min Vertical Neck Height <span>(0.01-0.1)</span>:</label>
+            <label for="forwardHeadAngleThreshold">Forward Head Angle Threshold (degrees) <span>(0-45)</span>:</label>
+            <input type="number" id="forwardHeadAngleThreshold" name="forwardHeadAngleThreshold" step="1" min="0" max="45">
+        </div>
+
+        <div class="setting">
+            <label for="shoulderTiltAngleThreshold">Shoulder Tilt Angle Threshold (degrees) <span>(0-30)</span>:</label>
+            <input type="number" id="shoulderTiltAngleThreshold" name="shoulderTiltAngleThreshold" step="1" min="0" max="30">
+        </div>
+
+        <div class="setting">
+            <label for="minVerticalNeckHeight">Min Vertical Neck Height (ratio) <span>(0.01-0.1)</span>:</label>
             <input type="number" id="minVerticalNeckHeight" name="minVerticalNeckHeight" step="0.005" min="0.01" max="0.1">
-        </div>
-
-        <div class="setting">
-            <label for="forwardHeadOffsetThreshold">Forward Head Offset Threshold <span>(-0.2 to -0.01)</span>:</label>
-            <input type="number" id="forwardHeadOffsetThreshold" name="forwardHeadOffsetThreshold" step="0.01" min="-0.2" max="-0.01">
-        </div>
-
-        <div class="setting">
-            <label for="shoulderHeightDifferenceThreshold">Shoulder Height Difference Threshold <span>(0.01-0.2)</span>:</label>
-            <input type="number" id="shoulderHeightDifferenceThreshold" name="shoulderHeightDifferenceThreshold" step="0.01" min="0.01" max="0.2">
         </div>
 
         <div class="setting">
@@ -149,6 +149,40 @@
                 <label for="enableBlurEffect">Enable Blur Effect on Other Tabs (Bad Posture)</label>
             </div>
         </div>
+
+        <hr style="margin: 30px 0; border-color: #ce93d8;">
+
+        <h2>Calibration Settings</h2>
+
+        <div class="setting" id="calibratedValuesDisplay" style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom:15px; display: none;">
+            <label style="font-weight:bold; color: #6a1b9a; margin-bottom: 5px;">Current Calibrated Posture:</label>
+            <div id="calibratedHeadTilt">- Head Tilt: N/A</div>
+            <div id="calibratedForwardHead">- Forward Head: N/A</div>
+            <div id="calibratedShoulderTilt">- Shoulder Tilt: N/A</div>
+            <div id="calibratedNeckHeight">- Neck Height Ratio: N/A</div>
+        </div>
+
+        <div class="setting">
+            <label for="maxHeadTiltDeviation">Max Head Tilt Deviation (degrees) <span>(0-20)</span>:</label>
+            <input type="number" id="maxHeadTiltDeviation" name="maxHeadTiltDeviation" step="1" min="0" max="20">
+        </div>
+
+        <div class="setting">
+            <label for="maxForwardHeadDeviation">Max Forward Head Deviation (degrees) <span>(0-20)</span>:</label>
+            <input type="number" id="maxForwardHeadDeviation" name="maxForwardHeadDeviation" step="1" min="0" max="20">
+        </div>
+
+        <div class="setting">
+            <label for="maxShoulderTiltDeviation">Max Shoulder Tilt Deviation (degrees) <span>(0-15)</span>:</label>
+            <input type="number" id="maxShoulderTiltDeviation" name="maxShoulderTiltDeviation" step="1" min="0" max="15">
+        </div>
+
+        <div class="setting">
+            <label for="neckHeightRatioDeviation">Neck Height Ratio Deviation (ratio) <span>(0.001-0.05)</span>:</label>
+            <input type="number" id="neckHeightRatioDeviation" name="neckHeightRatioDeviation" step="0.001" min="0.001" max="0.05">
+        </div>
+
+        <button id="clearCalibration" style="background-color: #ef5350; margin-bottom: 20px;">Clear Calibrated Posture</button>
         
         <button id="saveSettings">Save Settings</button>
         <button id="resetToDefaults">Reset to Defaults</button>

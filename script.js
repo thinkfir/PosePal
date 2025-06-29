@@ -2,9 +2,29 @@ let posture = "Neutral";
 
 // Declare variables that will be assigned when DOM is ready
 let videoElement, canvasElement, canvasCtx, statusDisplay, pose, camera;
+let pipVideoElement; // NEW: Hidden video element for PiP stream from canvas
 let autoPipEnabled = true; // Local cache of the setting, default true
 let wasAutoPiP = false; // Flag to track if PiP was entered automatically by this script
 let pipInteractionOccurred = false; // NEW: Flag to track if user has interacted with PiP controls
+
+// NEW: Default thresholds for angle-based checks (in degrees)
+let headTiltAngleThreshold = 20; // Increased from 17
+let forwardHeadAngleThreshold = 22; // Increased from 20
+let shoulderTiltAngleThreshold = 12; // Increased from 10
+
+// Existing settings that will be loaded from storage
+let minVerticalNeckHeight = 0.015; // Decreased from 0.018 for less sensitivity
+let enableNotifications = true;
+
+// NEW: Calibration related variables
+let calibratedMetrics = null; // Will store { headTilt, forwardHead, shoulderTilt, neckHeight }
+let isCalibrating = false; // Flag to trigger calibration in onResults
+
+// NEW: Default deviation thresholds (used if posture is calibrated)
+let maxHeadTiltDeviation = 10; // degrees, increased from 8 for less Y-axis sensitivity
+let maxForwardHeadDeviation = 11; // degrees, increased from 10
+let maxShoulderTiltDeviation = 8; // degrees, increased from 7
+let neckHeightRatioDeviation = 0.015; // Increased from 0.012 for less sensitivity
 
 document.addEventListener('DOMContentLoaded', () => {
     videoElement = document.getElementById('video');
@@ -13,6 +33,13 @@ document.addEventListener('DOMContentLoaded', () => {
     statusDisplay = document.getElementById('status');
     const settingsIcon = document.getElementById('settingsIcon'); // Get the settings icon
     const pipButton = document.getElementById('pipButton'); // Get the PiP button
+    const calibrateButton = document.getElementById('calibrateButton'); // NEW: Get the Calibrate button
+
+    // NEW: Create a hidden video element for PiP streaming from canvas
+    pipVideoElement = document.createElement('video');
+    pipVideoElement.id = 'pipVideoOutput';
+    pipVideoElement.autoplay = true;
+    pipVideoElement.muted = true; // Important for autoplay and background streaming
 
     // Initialize MediaPipe Pose
     pose = new Pose({
@@ -56,25 +83,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // PiP Button functionality
-    if (pipButton && videoElement) {
+    if (pipButton && pipVideoElement) { // Check pipVideoElement
         pipButton.addEventListener('click', togglePictureInPicture);
 
-        // Update PiP button text/icon based on PiP state
-        videoElement.addEventListener('enterpictureinpicture', () => {
+        // Update PiP button text/icon based on PiP state - LISTEN ON PIPVIDEOELEMENT
+        pipVideoElement.addEventListener('enterpictureinpicture', () => {
             pipButton.title = "Exit Picture-in-Picture";
             // You could change the icon here, e.g., pipButton.textContent = '📺X';
         });
 
-        videoElement.addEventListener('leavepictureinpicture', () => {
+        pipVideoElement.addEventListener('leavepictureinpicture', () => {
             pipButton.title = "Toggle Picture-in-Picture";
-            console.log("script.js: Left Picture-in-Picture mode (event listener).");
+            console.log("script.js: Left Picture-in-Picture mode (canvas stream, event listener).");
             wasAutoPiP = false; // If PiP is exited for any reason, it's no longer the current auto-PiP session.
             // Reset icon, e.g., pipButton.textContent = '📺';
         });
 
     } else {
         if (!pipButton) console.error("PiP button (pipButton) not found.");
-        if (!videoElement) console.error("Video element not found for PiP.");
+        if (!pipVideoElement) console.error("pipVideoElement not found for PiP button events.");
+    }
+
+    // NEW: Calibrate Button functionality
+    if (calibrateButton) {
+        calibrateButton.addEventListener('click', () => {
+            calibratePosture();
+        });
+    } else {
+        console.error("Calibrate button (calibrateButton) not found.");
     }
 
     // Inform background script about the PosePal tab and request initial state
@@ -97,33 +133,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Function to load settings from chrome.storage.sync
 function loadPosePalSettings() {
-    chrome.storage.sync.get([
-        'horizontalTiltThreshold', 
-        'minVerticalNeckHeight', 
-        'forwardHeadOffsetThreshold', 
-        'shoulderHeightDifferenceThreshold',
-        'enableNotifications',
-        'enableAutoPip' // Load this new setting
-    ], (items) => {
+    // Define default values for all settings PosePal uses
+    const defaultValues = {
+        headTiltAngleThreshold: 20, // Matches global
+        forwardHeadAngleThreshold: 22, // Corrected to match global lenient value
+        shoulderTiltAngleThreshold: 12, // Corrected to match global lenient value
+        minVerticalNeckHeight: 0.015, // Matches global - updated
+        enableNotifications: true,
+        enableAutoPip: true,
+        // NEW: Add calibration settings and deviation thresholds to defaults
+        calibratedMetrics: null,
+        maxHeadTiltDeviation: 10,
+        maxForwardHeadDeviation: 11,
+        maxShoulderTiltDeviation: 8,
+        neckHeightRatioDeviation: 0.015, // Matches global - updated
+    };
+
+    chrome.storage.sync.get(defaultValues, (items) => {
         if (chrome.runtime.lastError) {
             console.error("Error loading settings in script.js:", chrome.runtime.lastError.message);
-            // Keep defaults if error
+            // In case of error, explicitly use the compiled-in defaults
+            headTiltAngleThreshold = defaultValues.headTiltAngleThreshold;
+            forwardHeadAngleThreshold = defaultValues.forwardHeadAngleThreshold;
+            shoulderTiltAngleThreshold = defaultValues.shoulderTiltAngleThreshold;
+            minVerticalNeckHeight = defaultValues.minVerticalNeckHeight;
+            enableNotifications = defaultValues.enableNotifications;
+            autoPipEnabled = defaultValues.enableAutoPip;
+            // NEW: Load calibration settings
+            calibratedMetrics = defaultValues.calibratedMetrics;
+            maxHeadTiltDeviation = defaultValues.maxHeadTiltDeviation;
+            maxForwardHeadDeviation = defaultValues.maxForwardHeadDeviation;
+            maxShoulderTiltDeviation = defaultValues.maxShoulderTiltDeviation;
+            neckHeightRatioDeviation = defaultValues.neckHeightRatioDeviation;
             return;
         }
-        horizontalTiltThreshold = items.horizontalTiltThreshold !== undefined ? items.horizontalTiltThreshold : 0.07;
-        minVerticalNeckHeight = items.minVerticalNeckHeight !== undefined ? items.minVerticalNeckHeight : 0.03;
-        forwardHeadOffsetThreshold = items.forwardHeadOffsetThreshold !== undefined ? items.forwardHeadOffsetThreshold : -0.05;
-        shoulderHeightDifferenceThreshold = items.shoulderHeightDifferenceThreshold !== undefined ? items.shoulderHeightDifferenceThreshold : 0.04;
-        enableNotifications = items.enableNotifications !== undefined ? items.enableNotifications : true;
-        autoPipEnabled = items.enableAutoPip !== undefined ? items.enableAutoPip : true;
         
-        console.log('PosePal settings loaded in script.js:', {
-            horizontalTiltThreshold,
+        // Assign values from storage (or defaults if not in storage)
+        headTiltAngleThreshold = items.headTiltAngleThreshold;
+        forwardHeadAngleThreshold = items.forwardHeadAngleThreshold;
+        shoulderTiltAngleThreshold = items.shoulderTiltAngleThreshold;
+        minVerticalNeckHeight = items.minVerticalNeckHeight;
+        enableNotifications = items.enableNotifications;
+        autoPipEnabled = items.enableAutoPip;
+        // NEW: Load calibration settings
+        calibratedMetrics = items.calibratedMetrics;
+        maxHeadTiltDeviation = items.maxHeadTiltDeviation;
+        maxForwardHeadDeviation = items.maxForwardHeadDeviation;
+        maxShoulderTiltDeviation = items.maxShoulderTiltDeviation;
+        neckHeightRatioDeviation = items.neckHeightRatioDeviation;
+        
+        console.log('PosePal settings loaded/applied in script.js:', {
+            headTiltAngleThreshold,
+            forwardHeadAngleThreshold,
+            shoulderTiltAngleThreshold,
             minVerticalNeckHeight,
-            forwardHeadOffsetThreshold,
-            shoulderHeightDifferenceThreshold,
             enableNotifications,
-            autoPipEnabled
+            autoPipEnabled,
+            calibratedMetrics, // Log loaded calibration
+            maxHeadTiltDeviation,
+            maxForwardHeadDeviation,
+            maxShoulderTiltDeviation,
+            neckHeightRatioDeviation
         });
     });
 }
@@ -139,100 +209,137 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 // Initial load of settings
 loadPosePalSettings();
 
-document.addEventListener('visibilitychange', () => {
-    console.log(`script.js: Visibility changed to: ${document.visibilityState}. Auto PiP enabled: ${autoPipEnabled}. Video Element: ${videoElement ? 'exists' : 'null'}`);
-    if (!videoElement) {
-        console.warn("script.js: videoElement is null in visibilitychange handler.");
+document.addEventListener('visibilitychange', async () => { // Made async
+    console.log(`script.js: Visibility changed to: ${document.visibilityState}. Auto PiP enabled: ${autoPipEnabled}.`);
+    if (!pipVideoElement) { // Check pipVideoElement
+        console.warn("script.js: pipVideoElement is null in visibilitychange handler.");
         return;
     }
-    if (!videoElement.srcObject) {
-        console.warn("script.js: videoElement.srcObject is null in visibilitychange handler.");
-        return;
-    }
-    console.log(`script.js: videoElement.readyState: ${videoElement.readyState}, paused: ${videoElement.paused}, pipInteractionOccurred: ${pipInteractionOccurred}`); // Added pipInteractionOccurred
+    // No need to check videoElement.srcObject here as pipVideoElement gets stream from canvas
+
+    console.log(`script.js: pipVideoElement.readyState: ${pipVideoElement.readyState}, paused: ${pipVideoElement.paused}, pipInteractionOccurred: ${pipInteractionOccurred}`);
 
     if (document.visibilityState === 'hidden') {
-        console.log(`script.js: Tab hidden. autoPipEnabled: ${autoPipEnabled}, PiP Active: ${document.pictureInPictureElement === videoElement}, pipInteractionOccurred: ${pipInteractionOccurred}`);
-        if (autoPipEnabled && pipInteractionOccurred && document.pictureInPictureElement !== videoElement) {
-            console.log("script.js: Conditions met for entering PiP (hidden, autoPipEnabled, pipInteractionOccurred, not already in PiP). Requesting PiP.");
-            if (videoElement.paused) {
-                console.log("script.js: Video is paused, attempting to play before PiP.");
-                videoElement.play().then(() => {
-                    console.log("script.js: Video played successfully before PiP.");
-                    videoElement.requestPictureInPicture()
-                        .then(() => {
-                            console.log("script.js: Entered PiP due to tab hidden (after play, interaction occurred).");
-                            wasAutoPiP = true;
-                        })
-                        .catch(error => {
-                            console.error("script.js: Error entering PiP on tab hidden (after play, interaction occurred):", error);
-                            if (error.name === 'NotAllowedError') {
-                                console.warn("script.js: Automatic PiP failed (after play). Browser may require a fresh user interaction. Click PiP button on PosePal tab to re-enable for next switch.");
-                                pipInteractionOccurred = false; // Reset flag, requiring new user gesture
-                            }
-                        });
-                }).catch(err => {
-                    console.error("script.js: Error playing video before PiP:", err);
-                });
-            } else {
-                console.log("script.js: Video is playing, requesting PiP (interaction occurred).");
-                videoElement.requestPictureInPicture()
-                    .then(() => {
-                        console.log("script.js: Entered PiP due to tab hidden (interaction occurred).");
-                        wasAutoPiP = true;
-                    })
-                    .catch(error => {
-                        console.error("script.js: Error entering PiP on tab hidden (interaction occurred):", error);
-                        if (error.name === 'NotAllowedError') {
-                            console.warn("script.js: Automatic PiP failed. Browser may require a fresh user interaction. Click PiP button on PosePal tab to re-enable for next switch.");
-                            pipInteractionOccurred = false; // Reset flag, requiring new user gesture
-                        }
-                    });
+        console.log(`script.js: Tab hidden. autoPipEnabled: ${autoPipEnabled}, PiP Active: ${document.pictureInPictureElement === pipVideoElement}, pipInteractionOccurred: ${pipInteractionOccurred}`);
+        if (autoPipEnabled && pipInteractionOccurred && document.pictureInPictureElement !== pipVideoElement) {
+            console.log("script.js: Conditions met for entering PiP (hidden, autoPipEnabled, pipInteractionOccurred, not already in PiP with pipVideoElement). Requesting PiP.");
+            
+            // Ensure canvas stream is active on pipVideoElement
+            if (!pipVideoElement.srcObject && canvasElement.captureStream) {
+                try {
+                    pipVideoElement.srcObject = canvasElement.captureStream(25); // 25 FPS
+                    await pipVideoElement.play(); // Ensure it's playing
+                    console.log("script.js: pipVideoElement stream started in visibilitychange.");
+                } catch (e) {
+                    console.error("script.js: Error starting pipVideoElement stream in visibilitychange:", e);
+                    return; // Don't proceed if stream fails
+                }
+            } else if (!pipVideoElement.srcObject) {
+                 console.warn("script.js: pipVideoElement.srcObject is null and captureStream unavailable in visibilitychange.");
+                 return;
             }
+
+            pipVideoElement.requestPictureInPicture()
+                .then(() => {
+                    console.log("script.js: Entered PiP (canvas stream) due to tab hidden (interaction occurred).");
+                    wasAutoPiP = true;
+                })
+                .catch(error => {
+                    console.error("script.js: Error entering PiP (canvas stream) on tab hidden (interaction occurred):", error);
+                    if (error.name === 'NotAllowedError') {
+                        console.warn("script.js: Automatic PiP (canvas stream) failed. Browser may require a fresh user interaction. Click PiP button on PosePal tab to re-enable for next switch.");
+                        pipInteractionOccurred = false; // Reset flag, requiring new user gesture
+                    }
+                });
         } else if (autoPipEnabled && !pipInteractionOccurred) {
             console.warn("script.js: Auto PiP enabled, but requires a manual PiP toggle first (or again if a previous auto-attempt failed). Please click the PiP button on the PosePal tab.");
         } else {
-            console.log("script.js: Conditions NOT met for entering PiP (hidden).", {autoPipEnabled, pipActive: document.pictureInPictureElement === videoElement, pipInteractionOccurred});
+            console.log("script.js: Conditions NOT met for entering PiP (hidden).", {autoPipEnabled, pipActive: document.pictureInPictureElement === pipVideoElement, pipInteractionOccurred});
         }
     } else if (document.visibilityState === 'visible') {
-        console.log(`script.js: Tab visible. Auto PiP enabled: ${autoPipEnabled}, PiP Active: ${document.pictureInPictureElement === videoElement}, wasAutoPiP: ${wasAutoPiP}, pipInteractionOccurred: ${pipInteractionOccurred}`);
-        if (document.pictureInPictureElement === videoElement && wasAutoPiP) {
-            // Previously, we would exit PiP here if autoPipEnabled was true.
-            // Now, we keep it open as per user suggestion.
-            console.log("script.js: Tab visible. PiP was automatically opened and will remain open. Manual closure is required if PiP is no longer needed.");
-        } else if (document.pictureInPictureElement === videoElement && !wasAutoPiP) {
-            console.log("script.js: Tab visible. PiP is active (manually opened) and will remain open.");
+        console.log(`script.js: Tab visible. Auto PiP enabled: ${autoPipEnabled}, PiP Active: ${document.pictureInPictureElement === pipVideoElement}, wasAutoPiP: ${wasAutoPiP}, pipInteractionOccurred: ${pipInteractionOccurred}`);
+        if (document.pictureInPictureElement === pipVideoElement && wasAutoPiP) {
+            console.log("script.js: Tab visible. PiP (canvas stream) was automatically opened and will remain open. Manual closure is required.");
+        } else if (document.pictureInPictureElement === pipVideoElement && !wasAutoPiP) {
+            console.log("script.js: Tab visible. PiP (canvas stream) is active (manually opened) and will remain open.");
         } else {
-            console.log("script.js: Tab visible. No PiP active or PiP element is not our video.");
+            console.log("script.js: Tab visible. No PiP active or PiP element is not our pipVideoElement.");
         }
     }
 });
 
 // UPDATED Manual Picture-in-Picture Toggle
 async function togglePictureInPicture() {
-    if (!videoElement || !videoElement.srcObject) {
-        console.error("Video element not found or not ready for manual PiP toggle.");
+    if (!pipVideoElement || !canvasElement) { // Check pipVideoElement and canvasElement
+        console.error("pipVideoElement or canvasElement not found for manual PiP toggle.");
         return;
     }
-    if (document.pictureInPictureElement === videoElement) { // Currently in PiP, so exiting
+
+    // Ensure canvas stream is active on pipVideoElement
+    if (!pipVideoElement.srcObject && canvasElement.captureStream) {
+        try {
+            pipVideoElement.srcObject = canvasElement.captureStream(25); // 25 FPS
+            await pipVideoElement.play(); // Ensure it's playing
+            console.log("script.js: pipVideoElement stream started in togglePictureInPicture.");
+        } catch (e) {
+            console.error("script.js: Error starting pipVideoElement stream in togglePictureInPicture:", e);
+            return; // Don't proceed if stream fails
+        }
+    } else if (!pipVideoElement.srcObject) {
+        console.warn("script.js: pipVideoElement.srcObject is null and captureStream unavailable.");
+        return;
+    }
+
+
+    if (document.pictureInPictureElement === pipVideoElement) {
         try {
             await document.exitPictureInPicture();
-            console.log("Manually exited Picture-in-Picture mode.");
-            wasAutoPiP = false; // User action overrides auto state
-            pipInteractionOccurred = true; // User interacted with PiP controls
+            console.log("Manually exited Picture-in-Picture mode (canvas stream).");
+            wasAutoPiP = false;
+            pipInteractionOccurred = true;
         } catch (error) {
-            console.error("Error manually exiting Picture-in-Picture mode:", error);
+            console.error("Error manually exiting Picture-in-Picture mode (canvas stream):", error);
         }
-    } else { // Not in PiP, so entering
+    } else {
         try {
-            await videoElement.requestPictureInPicture();
-            console.log("Manually entered Picture-in-Picture mode.");
-            wasAutoPiP = false; // User action means it's not "auto" PiP from visibility change
-            pipInteractionOccurred = true; // User interacted with PiP controls
+            await pipVideoElement.requestPictureInPicture();
+            console.log("Manually entered Picture-in-Picture mode (canvas stream).");
+            wasAutoPiP = false;
+            pipInteractionOccurred = true;
         } catch (error) {
-            console.error("Error manually entering Picture-in-Picture mode:", error);
+            console.error("Error manually entering Picture-in-Picture mode (canvas stream):", error);
         }
     }
+}
+
+// NEW: Function to initiate posture calibration
+function calibratePosture() {
+    if (!videoElement || !videoElement.srcObject || videoElement.readyState < 2) {
+        console.warn("script.js: Video not ready for calibration.");
+        if (statusDisplay) {
+            statusDisplay.textContent = "Webcam not ready. Please wait.";
+            statusDisplay.className = 'neutral-posture';
+        }
+        return;
+    }
+    isCalibrating = true;
+    if (statusDisplay) {
+        statusDisplay.textContent = "Calibrating... Hold your ideal posture and look at the camera.";
+        statusDisplay.className = 'neutral-posture'; // Or a specific 'calibrating' style
+    }
+    console.log("script.js: Calibration initiated. Waiting for next onResults.");
+
+    // Optional: Provide a timeout for calibration attempt
+    setTimeout(() => {
+        if (isCalibrating) {
+            isCalibrating = false; // Reset flag if no landmarks detected in time
+            if (statusDisplay && statusDisplay.textContent.startsWith("Calibrating...")) {
+                 statusDisplay.textContent = "Calibration timed out. Ensure you are clearly visible and try again.";
+                 statusDisplay.className = 'bad-posture';
+            }
+            console.warn("script.js: Calibration timed out.");
+        }
+    }, 5000); // 5 seconds timeout
 }
 
 // Analyze posture from results
@@ -242,6 +349,15 @@ function onResults(results) {
   canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height); // Re-enabled to show video feed on canvas for debugging
 
   if (!results.poseLandmarks) {
+    // Draw "No pose detected" on canvas for PiP
+    canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    canvasCtx.fillRect(0, canvasElement.height - 40, canvasElement.width, 40);
+    canvasCtx.fillStyle = 'white';
+    canvasCtx.font = '16px Arial';
+    canvasCtx.textAlign = 'center';
+    canvasCtx.fillText("No pose detected. Ensure you are visible.", canvasElement.width / 2, canvasElement.height - 15);
+    canvasCtx.textAlign = 'left'; // Reset
+
     if (statusDisplay) {
         statusDisplay.textContent = "No pose detected. Ensure you are visible.";
         statusDisplay.className = 'neutral-posture';
@@ -249,132 +365,220 @@ function onResults(results) {
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
         chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "NO_POSE", messages: [] });
     }
+    // Update pipVideoElement stream
+    if (pipVideoElement && canvasElement.captureStream && (!pipVideoElement.srcObject || pipVideoElement.srcObject.getVideoTracks()[0]?.readyState === 'ended')) {
+        pipVideoElement.srcObject = canvasElement.captureStream(25);
+        pipVideoElement.play().catch(e => console.warn("pipVideo play error on no pose:", e));
+    }
     canvasCtx.restore();
     return;
   }
 
   const lm = results.poseLandmarks;
+  const nose = lm[0]; // PoseLandmarker.PoseLandmarkIds.NOSE
   const leftEar = lm[7]; // PoseLandmarker.PoseLandmarkIds.LEFT_EAR
-  const leftShoulder = lm[11]; // PoseLandmarker.PoseLandmarkIds.LEFT_SHOULDER
   const rightEar = lm[8]; // PoseLandmarker.PoseLandmarkIds.RIGHT_EAR
+  const leftShoulder = lm[11]; // PoseLandmarker.PoseLandmarkIds.LEFT_SHOULDER
   const rightShoulder = lm[12]; // PoseLandmarker.PoseLandmarkIds.RIGHT_SHOULDER
-  // Add other landmarks if your commented-out checks are re-enabled later
-  // const nose = lm[0]; 
+  
+  // Check if all essential landmarks are detected and sufficiently visible
+  const requiredLandmarks = [nose, leftEar, rightEar, leftShoulder, rightShoulder];
+  let allLandmarksValid = true;
+  for (const landmark of requiredLandmarks) {
+    if (!landmark || (landmark.visibility !== undefined && landmark.visibility < 0.5)) {
+      allLandmarksValid = false;
+      break;
+    }
+  }
 
-  if (!leftEar || !leftShoulder || !rightEar || !rightShoulder) {
+  if (!allLandmarksValid) {
+    // Draw "Partial or unclear pose" on canvas for PiP
+    canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    canvasCtx.fillRect(0, canvasElement.height - 40, canvasElement.width, 40);
+    canvasCtx.fillStyle = 'white';
+    canvasCtx.font = '16px Arial';
+    canvasCtx.textAlign = 'center';
+    canvasCtx.fillText("Partial or unclear pose. Adjust position.", canvasElement.width / 2, canvasElement.height - 15);
+    canvasCtx.textAlign = 'left'; // Reset
+
     if (statusDisplay) {
-        statusDisplay.textContent = "Partial pose detected. Adjust visibility.";
+        statusDisplay.textContent = "Partial or unclear pose. Adjust visibility/position.";
         statusDisplay.className = 'neutral-posture';
     }
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
         chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "PARTIAL_POSE", messages: [] });
     }
+    // Update pipVideoElement stream
+    if (pipVideoElement && canvasElement.captureStream && (!pipVideoElement.srcObject || pipVideoElement.srcObject.getVideoTracks()[0]?.readyState === 'ended')) {
+        pipVideoElement.srcObject = canvasElement.captureStream(25);
+        pipVideoElement.play().catch(e => console.warn("pipVideo play error on partial pose:", e));
+    }
     canvasCtx.restore();
     return;
   }
 
-  // Default settings (should match settings.js defaults)
-  const defaultSettings = {
-    enableNotifications: true,
-    horizontalTiltThreshold: 0.07,
-    minVerticalNeckHeight: 0.03,
-    forwardHeadOffsetThreshold: -0.05,
-    shoulderHeightDifferenceThreshold: 0.04,
-    // notificationInterval: 20 // Not used in script.js for decision making
-  };
+  // Calculate current posture metrics
+  const currentMetrics = {};
+  // 1. Vertical Neck Height (Average)
+  const dyLeftNeck = leftShoulder.y - leftEar.y; 
+  const dyRightNeck = rightShoulder.y - rightEar.y;
+  currentMetrics.neckHeight = (dyLeftNeck + dyRightNeck) / 2;
 
-  chrome.storage.sync.get(defaultSettings, (settings) => {
-    if (chrome.runtime.lastError) {
-        console.error("Error getting settings in onResults:", chrome.runtime.lastError.message);
-        // Potentially use defaultSettings directly or handle error
+  // 2. Head Tilt (Side-to-Side)
+  const earDiffX = rightEar.x - leftEar.x;
+  const earDiffY = rightEar.y - leftEar.y;
+  currentMetrics.headTilt = Math.atan2(earDiffY, earDiffX) * (180 / Math.PI);
+
+  // 3. Forward Head Posture
+  const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
+  const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+  const headOffsetH = nose.x - midShoulderX;
+  const headOffsetV = nose.y - midShoulderY;
+  currentMetrics.forwardHead = Math.atan2(headOffsetH, -headOffsetV) * (180 / Math.PI);
+  
+  // 4. Shoulder Levelness
+  const shoulderDiffX = rightShoulder.x - leftShoulder.x;
+  const shoulderDiffY = rightShoulder.y - leftShoulder.y;
+  currentMetrics.shoulderTilt = Math.atan2(shoulderDiffY, shoulderDiffX) * (180 / Math.PI);
+
+  // NEW: Handle Calibration if isCalibrating is true
+  if (isCalibrating) {
+    calibratedMetrics = { ...currentMetrics }; // Store a copy
+    chrome.storage.sync.set({ calibratedMetrics: calibratedMetrics }, () => {
+        if (chrome.runtime.lastError) {
+            console.error("Error saving calibrated metrics:", chrome.runtime.lastError.message);
+            if (statusDisplay) {
+                statusDisplay.textContent = "Error saving calibration. Please try again.";
+                statusDisplay.className = 'bad-posture';
+            }
+        } else {
+            console.log("Posture calibrated and saved:", calibratedMetrics);
+            if (statusDisplay) {
+                statusDisplay.textContent = "Posture Calibrated Successfully!";
+                statusDisplay.className = 'good-posture'; 
+            }
+        }
+    });
+    isCalibrating = false; // Reset flag
+
+    // Draw "Calibrated" on canvas for PiP
+    canvasCtx.fillStyle = 'rgba(0, 128, 0, 0.7)'; // Greenish background
+    canvasCtx.fillRect(0, canvasElement.height - 40, canvasElement.width, 40);
+    canvasCtx.fillStyle = 'white';
+    canvasCtx.font = '16px Arial';
+    canvasCtx.textAlign = 'center';
+    canvasCtx.fillText("Posture Calibrated Successfully!", canvasElement.width / 2, canvasElement.height - 15);
+    canvasCtx.textAlign = 'left'; // Reset
+
+    // Update pipVideoElement stream
+    if (pipVideoElement && canvasElement.captureStream && (!pipVideoElement.srcObject || pipVideoElement.srcObject.getVideoTracks()[0]?.readyState === 'ended')) {
+        pipVideoElement.srcObject = canvasElement.captureStream(25);
+        pipVideoElement.play().catch(e => console.warn("pipVideo play error on calibration:", e));
     }
-    const { 
-        horizontalTiltThreshold,
-        minVerticalNeckHeight,
-        forwardHeadOffsetThreshold,
-        shoulderHeightDifferenceThreshold,
-        // enableNotifications // This setting is for background.js notifications, not for sending status
-    } = settings;
+    canvasCtx.restore(); // Restore canvas before returning
+    return; // Exit after calibration attempt, next frame will use new metrics
+  }
 
-    let feedbackMessages = [];
+  let feedbackMessages = [];
+  let postureIsGood = true;
 
-    // Temporarily disabled head and neck checks (as per previous request)
-    
-    const dxLeft = leftEar.x - leftShoulder.x;
-    const dxRight = rightEar.x - rightShoulder.x;
-    const dyLeft = leftShoulder.y - leftEar.y; // Assuming Y is inverted (smaller Y is higher)
-    const dyRight = rightShoulder.y - rightEar.y;
-
-
-    if (dyLeft < minVerticalNeckHeight || dyRight < minVerticalNeckHeight) {
+  if (calibratedMetrics) {
+    // MODE 1: Check against calibrated posture using deviation thresholds
+    if (Math.abs(currentMetrics.headTilt - calibratedMetrics.headTilt) > maxHeadTiltDeviation) {
+        feedbackMessages.push(`Level head (calibrated: ${calibratedMetrics.headTilt.toFixed(0)}°, current: ${currentMetrics.headTilt.toFixed(0)}°).`);
+        postureIsGood = false;
+    }
+    if (Math.abs(currentMetrics.forwardHead - calibratedMetrics.forwardHead) > maxForwardHeadDeviation) {
+        feedbackMessages.push(`Align head (calibrated: ${calibratedMetrics.forwardHead.toFixed(0)}°, current: ${currentMetrics.forwardHead.toFixed(0)}°).`);
+        postureIsGood = false;
+    }
+    if (Math.abs(currentMetrics.shoulderTilt - calibratedMetrics.shoulderTilt) > maxShoulderTiltDeviation) {
+        feedbackMessages.push(`Level shoulders (calibrated: ${calibratedMetrics.shoulderTilt.toFixed(0)}°, current: ${currentMetrics.shoulderTilt.toFixed(0)}°).`);
+        postureIsGood = false;
+    }
+    if (currentMetrics.neckHeight < (calibratedMetrics.neckHeight - neckHeightRatioDeviation)) {
+        feedbackMessages.push(`Sit up straighter (calibrated neck height factor, current: ${currentMetrics.neckHeight.toFixed(3)}).`);
+        postureIsGood = false;
+    }
+  } else {
+    // MODE 2: Fallback to absolute thresholds if not calibrated
+    if (currentMetrics.neckHeight < minVerticalNeckHeight) { 
       feedbackMessages.push("Lift your chin / Sit up straighter.");
+      postureIsGood = false;
     }
-    
-    // This horizontal tilt check might need adjustment based on landmark definitions
-    // Example: if (Math.abs(nose.x - ((leftEar.x + rightEar.x) / 2)) > horizontalTiltThreshold) {
-    // For simplicity, using the ear-shoulder X difference as a proxy if that was the intent
-    // Ensure nose is defined if you use it: const nose = lm[0];
-    // For now, let's assume the original intent was to check head tilt using ear-shoulder alignment
-    // A more direct head tilt might compare y-coordinates of ears, or x-coordinates of nose vs midpoint of ears.
-    // The existing dxLeft/dxRight check is more about forward/backward lean of the head relative to shoulders on X-axis.
-    // Let's use a placeholder for actual head tilt if nose is available, or stick to the ear-shoulder X diff for now.
-    // Re-evaluating the original commented out logic:
-    // if (Math.abs(dxLeft) > horizontalTiltThreshold || Math.abs(dxRight) > horizontalTiltThreshold) {
-    // This seems to check if one ear is significantly more forward/backward than its corresponding shoulder.
-    // A true horizontal tilt (head leaning left/right) would be Math.abs(leftEar.y - rightEar.y) > some_threshold
-    // Or, if using nose: Math.abs(nose.x - (leftShoulder.x + rightShoulder.x)/2) > horizontalTiltThreshold if shoulders are reference
-    // Or, Math.abs(nose.x - (leftEar.x + rightEar.x)/2) > horizontalTiltThreshold if ears are reference for centering nose
-
-    // Let's assume the original intent for "Level your head" was about horizontal alignment of ears or shoulders.
-    // The provided dxLeft/dxRight check is more for "is your head aligned over your shoulders (front/back)".
-    // For "Level your head" (side to side tilt), a better check would be:
-    // const nose = lm[0]; // Make sure nose is available
-    // if (Math.abs(nose.x - ((leftShoulder.x + rightShoulder.x) / 2)) > horizontalTiltThreshold) { // Example using nose and shoulders
-    //    feedbackMessages.push("Center your head over your shoulders.");
-    // }
-    // Or, for ear tilt:
-    // if (Math.abs(leftEar.y - rightEar.y) > horizontalTiltThreshold) { // Assuming horizontalTiltThreshold is also for Y diff
-    //     feedbackMessages.push("Level your head (ears at same height).");
-    // }
-
-    // Sticking to the original uncommented logic for now, which was:
-     if (Math.abs(dxLeft) > horizontalTiltThreshold || Math.abs(dxRight) > horizontalTiltThreshold) {
-       feedbackMessages.push("Level your head."); // This message might be misleading for what dxLeft/dxRight check.
-                                                 // It's more about forward/backward alignment of ear over shoulder.
-                                                 // A better message might be "Align ears over shoulders (front/back)."
-     }
-    
-    // Forward head: ear.x should be > shoulder.x if head is back (assuming origin is top-left)
-    // So, dxLeft (ear.x - shoulder.x) should be positive. If it's too negative, it's forward.
-    if (dxLeft < forwardHeadOffsetThreshold || dxRight < forwardHeadOffsetThreshold) {
-      feedbackMessages.push("Bring your head back (ears over shoulders).");
+    if (Math.abs(currentMetrics.headTilt) > headTiltAngleThreshold) {
+      feedbackMessages.push(`Level your head (ears ${currentMetrics.headTilt > 0 ? 'right tilted down' : 'left tilted down'}).`);
+      postureIsGood = false;
     }
-    
-
-    const shoulderHeightDifference = Math.abs(leftShoulder.y - rightShoulder.y);
-    if (shoulderHeightDifference > shoulderHeightDifferenceThreshold) {
-      feedbackMessages.push("Level your shoulders.");
+    if (Math.abs(currentMetrics.forwardHead) > forwardHeadAngleThreshold) {
+      feedbackMessages.push(`Align head centrally over shoulders (offset by ${currentMetrics.forwardHead.toFixed(0)}°).`);
+      postureIsGood = false;
     }
-
-    if (statusDisplay) {
-        if (feedbackMessages.length > 0) {
-          statusDisplay.textContent = feedbackMessages.join(" ");
+    if (Math.abs(currentMetrics.shoulderTilt) > shoulderTiltAngleThreshold) {
+      feedbackMessages.push(`Level your shoulders (${currentMetrics.shoulderTilt > 0 ? 'right shoulder lower' : 'left shoulder lower'}).`);
+      postureIsGood = false;
+    }
+  }
+  
+  // Update statusDisplay on the main page
+  if (statusDisplay) {
+      let pageMessage = "";
+      if (!postureIsGood) {
+          pageMessage = feedbackMessages.join(" ");
           statusDisplay.className = 'bad-posture';
-        } else {
-          statusDisplay.textContent = "Good Posture";
+      } else {
+          pageMessage = "Good Posture";
           statusDisplay.className = 'good-posture';
-        }
-    }
+      }
+      if (!calibratedMetrics) {
+          const tip = "Tip: Click 🎯 to calibrate. ";
+          if (postureIsGood) { pageMessage = tip + "Status: Good Posture."; }
+          else { pageMessage = tip + pageMessage; }
+      }
+      statusDisplay.textContent = pageMessage;
+  }
 
-    // Send status to background script unconditionally for badge and blur logic
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-        if (feedbackMessages.length > 0) {
-            chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture", messages: feedbackMessages });
-        } else {
-            chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Good Posture", messages: [] });
-        }
-    }
-  });
+  // NEW: Draw feedback messages on the canvas for PiP
+  let pipTipMessage = "";
+  if (!postureIsGood) {
+      pipTipMessage = feedbackMessages.join(" / "); // Use slash for PiP, more compact
+      canvasCtx.fillStyle = 'rgba(255, 0, 0, 0.7)'; // Reddish background for bad posture
+  } else {
+      pipTipMessage = "Good Posture";
+      canvasCtx.fillStyle = 'rgba(0, 128, 0, 0.7)'; // Greenish background for good posture
+  }
+  // Add calibration tip to PiP only if not calibrated and main tab is visible (less intrusive in PiP)
+  if (!calibratedMetrics && document.visibilityState === 'visible') {
+      pipTipMessage = "🎯 Calibrate! " + pipTipMessage;
+  }
+  
+  const textLineHeight = 18; // For PiP text
+  const textPadding = 5;
+  // Simple single line for PiP for now, can be expanded if needed
+  canvasCtx.fillRect(0, canvasElement.height - (textLineHeight + 2 * textPadding), canvasElement.width, (textLineHeight + 2 * textPadding));
+  canvasCtx.fillStyle = 'white';
+  canvasCtx.font = 'bold 14px Arial'; // Slightly smaller and bold for PiP
+  canvasCtx.textAlign = 'center';
+  canvasCtx.fillText(pipTipMessage, canvasElement.width / 2, canvasElement.height - textPadding - (textLineHeight / 2) + 3); // Adjust Y for better centering
+  canvasCtx.textAlign = 'left'; // Reset alignment
 
+  // Send status to background script unconditionally for badge and blur logic
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      if (feedbackMessages.length > 0) {
+          chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture", messages: feedbackMessages });
+      } else {
+          chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Good Posture", messages: [] });
+      }
+  }
+
+  // Ensure the pipVideoElement is streaming the updated canvas
+  if (pipVideoElement && canvasElement.captureStream) {
+    // Check if the stream is not set, or if the track is ended (can happen if canvas is resized or hidden/reshown)
+    const tracks = pipVideoElement.srcObject ? pipVideoElement.srcObject.getVideoTracks() : [];
+    if (!pipVideoElement.srcObject || tracks.length === 0 || tracks[0].readyState === 'ended') {
+        pipVideoElement.srcObject = canvasElement.captureStream(25); // FPS
+        pipVideoElement.play().catch(e => console.warn("pipVideo play error in onResults:", e));
+    }
+  }
   canvasCtx.restore();
 }
