@@ -6,7 +6,10 @@ const statusDisplay = document.getElementById('status');
 
 // Initialize MediaPipe Pose
 const pose = new Pose({
-  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+  locateFile: (file) => {
+    // Adjusted path to look directly in mediapipe.libs
+    return `mediapipe.libs/${file}`;
+  }
 });
 pose.setOptions({
   modelComplexity: 1,
@@ -73,24 +76,41 @@ function onResults(results) {
   // These thresholds are normalized (0.0 to 1.0 related to image dimensions)
   // and may need tuning based on observation.
 
-  // Condition 1: Head too far tilted or swayed horizontally.
-  // Bad if the absolute horizontal distance between ear and shoulder exceeds this threshold.
-  // (e.g., 7% of the image width).
+  // Condition 1: Head too far tilted or swayed horizontally (Lateral Tilt).
+  // Bad if the absolute horizontal distance between ear and shoulder exceeds this threshold on either side.
   const horizontalTiltThreshold = 0.07; // Adjust as needed
   const isHorizontallyTilted =
     Math.abs(dxLeft) > horizontalTiltThreshold ||
     Math.abs(dxRight) > horizontalTiltThreshold;
 
-  // Condition 2: Head dropped too low (chin towards chest, or neck compressed).
-  // Bad if the vertical distance (shoulder.y - ear.y) is less than this threshold.
-  // (e.g., ear is less than 5% of image height above the shoulder, or even below it).
+  // Condition 2: Head dropped too low (Chin to Chest).
+  // Bad if the vertical distance (shoulder.y - ear.y) is less than this threshold on either side.
+  // This means the ear is too close to the shoulder's height or even below it.
   const minVerticalNeckHeight = 0.05; // Adjust as needed
   const isHeadDropped =
     dyLeft < minVerticalNeckHeight ||
     dyRight < minVerticalNeckHeight;
 
-  // Combine conditions: Slouching if head is significantly tilted OR if head is dropped.
-  const slouching = isHorizontallyTilted || isHeadDropped;
+  // Condition 3: Forward Neck Crunch / Compressed Forward Head.
+  // This detects when the neck is compressed (not held high, but not fully dropped)
+  // AND there's some horizontal misalignment, indicating a forward lean.
+  const neckCrunchVerticalMax = 0.10;     // Upper bound for "compressed" neck height (dy).
+                                          // Must be > minVerticalNeckHeight.
+  const neckCrunchHorizontalThreshold = 0.03; // Smaller horizontal displacement threshold for this state.
+                                              // Suggests head is off-center while neck is compressed.
+
+  const isLeftNeckCrunched = 
+    (dyLeft >= minVerticalNeckHeight && dyLeft < neckCrunchVerticalMax) && 
+    (Math.abs(dxLeft) > neckCrunchHorizontalThreshold);
+  
+  const isRightNeckCrunched = 
+    (dyRight >= minVerticalNeckHeight && dyRight < neckCrunchVerticalMax) && 
+    (Math.abs(dxRight) > neckCrunchHorizontalThreshold);
+
+  const isForwardNeckCrunch = isLeftNeckCrunched || isRightNeckCrunched;
+
+  // Combine conditions: Slouching if any of the defined bad postures are detected.
+  const slouching = isHorizontallyTilted || isHeadDropped || isForwardNeckCrunch;
 
   /*
   // Original logic for reference:
