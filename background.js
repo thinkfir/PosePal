@@ -63,11 +63,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Notification click listener removed
-// chrome.notifications.onClicked.addListener((notificationId) => {
-//     if (notificationId.startsWith('postureNotification-')) {
-//         chrome.notifications.clear(notificationId);
-//     }
+// Listens for messages from script.js and shows notifications
+
+// Default settings (should match settings.js defaults)
+const defaultSettings = {
+    enableNotifications: true,
+    horizontalTiltThreshold: 0.07,
+    minVerticalNeckHeight: 0.03,
+    forwardHeadOffsetThreshold: -0.05,
+    shoulderHeightDifferenceThreshold: 0.04
+};
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === "POSTURE_STATUS") {
+        chrome.storage.sync.get(defaultSettings, (settings) => {
+            if (settings.enableNotifications && request.status === "Bad Posture") {
+                const messages = request.messages || [];
+                const notificationMessage = messages.length > 0 ? messages.join("\n") : "Adjust your posture.";
+                
+                chrome.notifications.create({
+                    type: "basic",
+                    iconUrl: "icons/icon128.png",
+                    title: "PosePal Alert!",
+                    message: notificationMessage,
+                    priority: 2
+                });
+            }
+        });
+    }
+});
+
+// Optional: Listen for storage changes to keep background script aware if needed,
+// though for notifications, checking storage on each message is usually sufficient.
+// chrome.storage.onChanged.addListener((changes, namespace) => {
+//   for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+//     console.log(
+//       `Storage key "${key}" in namespace "${namespace}" changed.`, 
+//       `Old value was "${oldValue}", new value is "${newValue}".`
+//     );
+//   }
 // });
 
 function updateBadge(status) {

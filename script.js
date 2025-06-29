@@ -78,54 +78,61 @@ function onResults(results) {
   const dyLeft = leftShoulder.y - leftEar.y;
   const dyRight = rightShoulder.y - rightEar.y;
 
-  // --- Basic Posture Logic with Specific Feedback (Reverted and Modified) ---
-  // --- Basic Posture Logic with Specific Feedback (Looser Thresholds) ---Add commentMore actions
-  const basicHorizontalTiltThreshold = 0.15; // Increased from 0.07, allows more tilt
-  const basicMinVerticalNeckHeight = 0.01;  // Decreased from 0.03, allows neck to be lower
-  const basicForwardHeadOffsetThreshold = -0.10; // Decreased from -0.05 (more negative), allows head further forward
-  const shoulderHeightDifferenceThreshold = 0.10; // Increased from 0.04, allows more shoulder height difference
+  // --- Load settings and then apply posture logic ---
+  // Default settings (should match settings.js defaults)
+  const defaultSettings = {
+    enableNotifications: true, // Though notifications are handled in background.js, script.js needs to know if it should send messages
+    horizontalTiltThreshold: 0.07,
+    minVerticalNeckHeight: 0.03,
+    forwardHeadOffsetThreshold: -0.05,
+    shoulderHeightDifferenceThreshold: 0.04
+  };
 
-  let feedbackMessages = [];
+  chrome.storage.sync.get(defaultSettings, (settings) => {
+    const { 
+        horizontalTiltThreshold,
+        minVerticalNeckHeight,
+        forwardHeadOffsetThreshold,
+        shoulderHeightDifferenceThreshold,
+        enableNotifications // Used to decide if messages should be sent
+    } = settings;
 
-  // Check for bad posture conditions
-  // These conditions are checked independently and can accumulate messages.
+    let feedbackMessages = [];
 
-  if (dyLeft < basicMinVerticalNeckHeight || dyRight < basicMinVerticalNeckHeight) {
-    feedbackMessages.push("Lift your chin / Sit up straighter."); // Condition: Head Dropped
-  }
-  
-  if (Math.abs(dxLeft) > basicHorizontalTiltThreshold || Math.abs(dxRight) > basicHorizontalTiltThreshold) {
-    feedbackMessages.push("Level your head."); // Condition: Head Tilted
-  }
-  
-  // This is a simplified "head forward" check.
-  // dxLeft/Right = ear.x - shoulder.x. Negative means ear is to the left of shoulder (from camera view).
-  // Assuming a typical setup where the camera is in front, this can indicate leaning forward.
-  if (dxLeft < basicForwardHeadOffsetThreshold || dxRight < basicForwardHeadOffsetThreshold) {
-    feedbackMessages.push("Bring your head back (ears over shoulders)."); // Condition: Head Forward
-  }
-
-  // Check for uneven shoulders
-  const shoulderHeightDifference = Math.abs(leftShoulder.y - rightShoulder.y);
-  if (shoulderHeightDifference > shoulderHeightDifferenceThreshold) {
-    feedbackMessages.push("Level your shoulders.");
-  }
-
-  // Update status display and send message
-  if (feedbackMessages.length > 0) {
-    statusDisplay.textContent = feedbackMessages.join(" ");
-    statusDisplay.className = 'bad-posture';
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture", messages: feedbackMessages });
+    // Check for bad posture conditions using loaded settings
+    if (dyLeft < minVerticalNeckHeight || dyRight < minVerticalNeckHeight) {
+      feedbackMessages.push("Lift your chin / Sit up straighter.");
     }
-  } else {
-    statusDisplay.textContent = "Good Posture";
-    statusDisplay.className = 'good-posture';
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Good Posture" });
+    
+    if (Math.abs(dxLeft) > horizontalTiltThreshold || Math.abs(dxRight) > horizontalTiltThreshold) {
+      feedbackMessages.push("Level your head.");
     }
-  }
-  // --- End of Modified Basic Posture Logic ---
+    
+    if (dxLeft < forwardHeadOffsetThreshold || dxRight < forwardHeadOffsetThreshold) {
+      feedbackMessages.push("Bring your head back (ears over shoulders).");
+    }
+
+    const shoulderHeightDifference = Math.abs(leftShoulder.y - rightShoulder.y);
+    if (shoulderHeightDifference > shoulderHeightDifferenceThreshold) {
+      feedbackMessages.push("Level your shoulders.");
+    }
+
+    if (feedbackMessages.length > 0) {
+      statusDisplay.textContent = feedbackMessages.join(" ");
+      statusDisplay.className = 'bad-posture';
+      if (enableNotifications && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture", messages: feedbackMessages });
+      }
+    } else {
+      statusDisplay.textContent = "Good Posture";
+      statusDisplay.className = 'good-posture';
+      // Optionally, send a "Good Posture" message if notifications are on, though typically not needed for good status
+      // if (enableNotifications && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      //   chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Good Posture" });
+      // }
+    }
+  });
+  // --- End of Posture Logic ---
 
   canvasCtx.restore();
 }

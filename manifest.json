@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "PoseCorrect",
-  "version": "0.1.0",
-  "description": "A Chrome extension for posture correction using MediaPipe.",
+  "name": "PosePal",
+  "version": "0.2.0",
+  "description": "Actively monitors your posture through your webcam and provides real-time feedback to help you maintain a healthier position.",
   "permissions": [
+    "activeTab",
     "scripting",
-    "tabs",
-    "storage"
+    "storage",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -15,7 +16,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "PoseCorrect",
+    "default_popup": "index.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -30,15 +31,15 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
+  "options_page": "settings.html",
   "web_accessible_resources": [
     {
       "resources": [
-        "index.html",
-        "script.js",
-        "style.css",
-        "mediapipe.libs/*"
+        "mediapipe.libs/*",
+        "settings.html",
+        "settings.js"
       ],
-      "matches": [ "<all_urls>" ]
+      "matches": ["<all_urls>"]
     }
   ]
 }

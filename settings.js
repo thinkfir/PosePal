@@ -1,34 +1,59 @@
-// Load settings when the page opens
+// Default settings
+const defaultSettings = {
+    enableNotifications: true,
+    horizontalTiltThreshold: 0.07,
+    minVerticalNeckHeight: 0.03,
+    forwardHeadOffsetThreshold: -0.05,
+    shoulderHeightDifferenceThreshold: 0.04
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    loadSettings();
+    const enableNotificationsCheckbox = document.getElementById('enableNotifications');
+    const horizontalTiltThresholdInput = document.getElementById('horizontalTiltThreshold');
+    const minVerticalNeckHeightInput = document.getElementById('minVerticalNeckHeight');
+    const forwardHeadOffsetThresholdInput = document.getElementById('forwardHeadOffsetThreshold');
+    const shoulderHeightDifferenceThresholdInput = document.getElementById('shoulderHeightDifferenceThreshold');
+    
+    const saveButton = document.getElementById('saveSettings');
+    const resetButton = document.getElementById('resetToDefaults');
+    const statusMessage = document.getElementById('statusMessage');
 
-    // Add event listeners to save settings when they change
-    document.getElementById('enableNotifications').addEventListener('change', saveSettings);
-    document.getElementById('enableAudio').addEventListener('change', saveSettings);
-    document.getElementById('enablePip').addEventListener('change', saveSettings);
-    document.getElementById('enablePipBlur').addEventListener('change', saveSettings);
+    // Load saved settings or defaults
+    chrome.storage.sync.get(defaultSettings, (settings) => {
+        enableNotificationsCheckbox.checked = settings.enableNotifications;
+        horizontalTiltThresholdInput.value = settings.horizontalTiltThreshold.toFixed(2);
+        minVerticalNeckHeightInput.value = settings.minVerticalNeckHeight.toFixed(3);
+        forwardHeadOffsetThresholdInput.value = settings.forwardHeadOffsetThreshold.toFixed(2);
+        shoulderHeightDifferenceThresholdInput.value = settings.shoulderHeightDifferenceThreshold.toFixed(2);
+    });
+
+    // Save settings
+    saveButton.addEventListener('click', () => {
+        const newSettings = {
+            enableNotifications: enableNotificationsCheckbox.checked,
+            horizontalTiltThreshold: parseFloat(horizontalTiltThresholdInput.value),
+            minVerticalNeckHeight: parseFloat(minVerticalNeckHeightInput.value),
+            forwardHeadOffsetThreshold: parseFloat(forwardHeadOffsetThresholdInput.value),
+            shoulderHeightDifferenceThreshold: parseFloat(shoulderHeightDifferenceThresholdInput.value)
+        };
+
+        chrome.storage.sync.set(newSettings, () => {
+            statusMessage.textContent = 'Settings saved!';
+            setTimeout(() => statusMessage.textContent = '', 2000);
+        });
+    });
+
+    // Reset to defaults
+    resetButton.addEventListener('click', () => {
+        enableNotificationsCheckbox.checked = defaultSettings.enableNotifications;
+        horizontalTiltThresholdInput.value = defaultSettings.horizontalTiltThreshold.toFixed(2);
+        minVerticalNeckHeightInput.value = defaultSettings.minVerticalNeckHeight.toFixed(3);
+        forwardHeadOffsetThresholdInput.value = defaultSettings.forwardHeadOffsetThreshold.toFixed(2);
+        shoulderHeightDifferenceThresholdInput.value = defaultSettings.shoulderHeightDifferenceThreshold.toFixed(2);
+        
+        chrome.storage.sync.set(defaultSettings, () => {
+            statusMessage.textContent = 'Settings reset to defaults!';
+            setTimeout(() => statusMessage.textContent = '', 2000);
+        });
+    });
 });
-
-function saveSettings() {
-    const settings = {
-        enableNotifications: document.getElementById('enableNotifications').checked,
-        enableAudio: document.getElementById('enableAudio').checked,
-        enablePip: document.getElementById('enablePip').checked,
-        enablePipBlur: document.getElementById('enablePipBlur').checked
-    };
-
-    chrome.storage.sync.set({ poseCorrectSettings: settings }, () => {
-        console.log('Settings saved');
-    });
-}
-
-function loadSettings() {
-    chrome.storage.sync.get('poseCorrectSettings', (data) => {
-        if (data.poseCorrectSettings) {
-            document.getElementById('enableNotifications').checked = data.poseCorrectSettings.enableNotifications || false;
-            document.getElementById('enableAudio').checked = data.poseCorrectSettings.enableAudio || false;
-            document.getElementById('enablePip').checked = data.poseCorrectSettings.enablePip || false;
-            document.getElementById('enablePipBlur').checked = data.poseCorrectSettings.enablePipBlur || false;
-        }
-    });
-}
