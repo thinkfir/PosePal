@@ -5,6 +5,7 @@ const defaultSettings = {
     enableBlurEffect: false,
     postureSensitivity: 50, // Default sensitivity (1-100)
     detectionDelay: 1500, // NEW: Default detection delay in ms
+    blurDelay: 1000, // <<< ADD THIS LINE
     // Notification interval is now fixed at 5 minutes, managed by background.js
 };
 
@@ -13,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const postureSensitivityValueDisplay = document.getElementById('postureSensitivityValue');
     const detectionDelaySlider = document.getElementById('detectionDelay'); // NEW
     const detectionDelayValueDisplay = document.getElementById('detectionDelayValue'); // NEW
+    const blurDelaySlider = document.getElementById('blurDelay'); // <<< ADD THIS LINE
+    const blurDelayValueDisplay = document.getElementById('blurDelayValue'); // <<< ADD THIS LINE
     const enableNotificationsCheckbox = document.getElementById('enableNotifications');
     const enableAutoPipCheckbox = document.getElementById('enableAutoPip');
     const enableBlurEffectCheckbox = document.getElementById('enableBlurEffect');
@@ -33,6 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
             detectionDelayValueDisplay.textContent = detectionDelaySlider.value;
         });
     }
+    // NEW: Update blur delay slider value display
+    if (blurDelaySlider && blurDelayValueDisplay) { // <<< ADD THIS BLOCK
+        blurDelaySlider.addEventListener('input', () => {
+            blurDelayValueDisplay.textContent = blurDelaySlider.value;
+        });
+    }
 
     // Load saved settings or defaults
     chrome.storage.sync.get(defaultSettings, (settings) => {
@@ -43,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
             postureSensitivityValueDisplay.textContent = defaultSettings.postureSensitivity;
             detectionDelaySlider.value = defaultSettings.detectionDelay; // NEW
             detectionDelayValueDisplay.textContent = defaultSettings.detectionDelay; // NEW
+            blurDelaySlider.value = defaultSettings.blurDelay; // <<< ADD THIS LINE
+            blurDelayValueDisplay.textContent = defaultSettings.blurDelay; // <<< ADD THIS LINE
             enableNotificationsCheckbox.checked = defaultSettings.enableNotifications;
             enableAutoPipCheckbox.checked = defaultSettings.enableAutoPip;
             enableBlurEffectCheckbox.checked = defaultSettings.enableBlurEffect;
@@ -51,8 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         postureSensitivitySlider.value = settings.postureSensitivity;
         postureSensitivityValueDisplay.textContent = settings.postureSensitivity;
-        detectionDelaySlider.value = settings.detectionDelay; // NEW
-        detectionDelayValueDisplay.textContent = settings.detectionDelay; // NEW
+        detectionDelaySlider.value = settings.detectionDelay; 
+        detectionDelayValueDisplay.textContent = settings.detectionDelay; 
+        blurDelaySlider.value = settings.blurDelay; // <<< ADD THIS LINE
+        blurDelayValueDisplay.textContent = settings.blurDelay; // <<< ADD THIS LINE
         enableNotificationsCheckbox.checked = settings.enableNotifications;
         enableAutoPipCheckbox.checked = settings.enableAutoPip;
         enableBlurEffectCheckbox.checked = settings.enableBlurEffect;
@@ -63,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newSettings = {
             postureSensitivity: parseInt(postureSensitivitySlider.value, 10),
             detectionDelay: parseInt(detectionDelaySlider.value, 10), // NEW
+            blurDelay: parseInt(blurDelaySlider.value, 10), // <<< ADD THIS LINE
             enableNotifications: enableNotificationsCheckbox.checked,
             enableAutoPip: enableAutoPipCheckbox.checked,
             enableBlurEffect: enableBlurEffectCheckbox.checked,
@@ -91,6 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     postureSensitivityValueDisplay.textContent = defaultSettings.postureSensitivity;
                     detectionDelaySlider.value = defaultSettings.detectionDelay; // NEW
                     detectionDelayValueDisplay.textContent = defaultSettings.detectionDelay; // NEW
+                    blurDelaySlider.value = defaultSettings.blurDelay; // <<< ADD THIS LINE
+                    blurDelayValueDisplay.textContent = defaultSettings.blurDelay; // <<< ADD THIS LINE
                     enableNotificationsCheckbox.checked = defaultSettings.enableNotifications;
                     enableAutoPipCheckbox.checked = defaultSettings.enableAutoPip;
                     enableBlurEffectCheckbox.checked = defaultSettings.enableBlurEffect;

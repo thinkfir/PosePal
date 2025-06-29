@@ -160,7 +160,11 @@
                 <label for="enableBlurEffect">Blur other tabs on bad posture</label>
             </div>
         </div>
-        
+                <div class="setting">
+            <label for="blurDelay">Blur Activation Delay (ms):</label>
+            <input type="range" id="blurDelay" name="blurDelay" min="0" max="5000" step="100" value="1000">
+            <span class="slider-value" id="blurDelayValue">1000</span> ms
+        </div>
         <button id="saveSettings">Save Settings</button>
         <button id="resetToDefaults">Reset to Defaults</button>
         <p id="statusMessage"></p>

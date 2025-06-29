@@ -9,7 +9,7 @@ let pipInteractionOccurred = false; // NEW: Flag to track if user has interacted
 
 // NEW: Default thresholds for angle-based checks (in degrees)
 let headTiltAngleThreshold = 25; // Increased from 20
-let forwardHeadAngleThreshold = 23; // Adjusted from 27/22
+let forwardHeadAngleThreshold = 40; // Adjusted from 27/22
 let shoulderTiltAngleThreshold = 15; // Increased from 12
 
 // Existing settings that will be loaded from storage
@@ -22,7 +22,7 @@ let isCalibrating = false; // Flag to trigger calibration in onResults
 
 // NEW: Default deviation thresholds (used if posture is calibrated)
 let maxHeadTiltDeviation = 15; // degrees, increased from 10
-let maxForwardHeadDeviation = 13; // degrees, adjusted from 16/12
+let maxForwardHeadDeviation = 25; // degrees, adjusted from 16/12
 let maxShoulderTiltDeviation = 12; // degrees, increased from 8
 let neckHeightRatioDeviation = 0.030; // Adjusted from 0.020/0.025
 
@@ -142,7 +142,7 @@ function loadPosePalSettings() {
     // Define default values for all settings PosePal uses
     const defaultValues = {
         headTiltAngleThreshold: 27, 
-        forwardHeadAngleThreshold: 25, // Adjusted
+        forwardHeadAngleThreshold: 40, // Adjusted
         shoulderTiltAngleThreshold: 16, 
         minVerticalNeckHeight: 0.006, // Adjusted
         enableNotifications: true,
@@ -150,7 +150,7 @@ function loadPosePalSettings() {
         // NEW: Add calibration settings and deviation thresholds to defaults
         calibratedMetrics: null,
         maxHeadTiltDeviation: 17,
-        maxForwardHeadDeviation: 15, // Adjusted
+        maxForwardHeadDeviation: 25, // Adjusted
         maxShoulderTiltDeviation: 13,
         neckHeightRatioDeviation: 0.035, // Adjusted
         enableBlurEffect: false, // Added from previous step, ensure it's here
@@ -503,42 +503,50 @@ function onResults(results) {
   let postureIsGood = true;
 
   if (calibratedMetrics) {
-    // MODE 1: Check against calibrated posture using deviation thresholds
-    if (Math.abs(currentMetrics.headTilt - calibratedMetrics.headTilt) > maxHeadTiltDeviation) {
-        feedbackMessages.push(`Level head.`); // Simplified
+    const headTiltDelta = Math.abs(currentMetrics.headTilt - calibratedMetrics.headTilt);
+    const headTiltThreshold = Math.max(10, maxHeadTiltDeviation * postureSensitivityFactor); // Never less than 10 deg
+    if (headTiltDelta > headTiltThreshold) {
+        feedbackMessages.push(`Level head.`);
         postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.forwardHead - calibratedMetrics.forwardHead) > maxForwardHeadDeviation) {
-        feedbackMessages.push(`Align head.`); // Simplified
+    if (Math.abs(currentMetrics.forwardHead - calibratedMetrics.forwardHead) > (maxForwardHeadDeviation * postureSensitivityFactor)) {
+        feedbackMessages.push(`Align head.`);
         postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.shoulderTilt - calibratedMetrics.shoulderTilt) > maxShoulderTiltDeviation) {
-        feedbackMessages.push(`Level shoulders.`); // Simplified
+    if (Math.abs(currentMetrics.shoulderTilt - calibratedMetrics.shoulderTilt) > (maxShoulderTiltDeviation * postureSensitivityFactor)) {
+        feedbackMessages.push(`Level shoulders.`);
         postureIsGood = false;
     }
-    if (currentMetrics.neckHeight < (calibratedMetrics.neckHeight - neckHeightRatioDeviation)) {
-        feedbackMessages.push(`Sit up straighter.`); // Simplified
+    const effectiveNeckHeightRatioDeviation = neckHeightRatioDeviation * postureSensitivityFactor;
+    if (currentMetrics.neckHeight < (calibratedMetrics.neckHeight - effectiveNeckHeightRatioDeviation)) {
+        feedbackMessages.push(`Sit up straighter.`);
         postureIsGood = false;
     }
-  } else {
-    // MODE 2: Fallback to absolute thresholds if not calibrated
-    if (currentMetrics.neckHeight < minVerticalNeckHeight) { 
-      feedbackMessages.push("Sit up straighter."); // Simplified
-      postureIsGood = false;
+} else {
+    const headTiltDelta = Math.abs(currentMetrics.headTilt);
+    const headTiltThreshold = Math.max(10, headTiltAngleThreshold * postureSensitivityFactor); // Never less than 10 deg
+    if (headTiltDelta > headTiltThreshold) {
+        feedbackMessages.push(`Level your head.`);
+        postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.headTilt) > headTiltAngleThreshold) {
-      feedbackMessages.push(`Level your head.`); // Simplified
-      postureIsGood = false;
+    const effectiveMinVerticalNeckHeight = minVerticalNeckHeight / postureSensitivityFactor;
+    if (currentMetrics.neckHeight < effectiveMinVerticalNeckHeight) {
+        feedbackMessages.push("Sit up straighter.");
+        postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.forwardHead) > forwardHeadAngleThreshold) {
-      feedbackMessages.push("Align your head (pull back)."); // Simplified
-      postureIsGood = false;
+    if (Math.abs(currentMetrics.headTilt) > (headTiltAngleThreshold * postureSensitivityFactor)) {
+        feedbackMessages.push(`Level your head.`);
+        postureIsGood = false;
     }
-    if (Math.abs(currentMetrics.shoulderTilt) > shoulderTiltAngleThreshold) {
-      feedbackMessages.push("Level your shoulders."); // Simplified
-      postureIsGood = false;
+    if (Math.abs(currentMetrics.forwardHead) > (forwardHeadAngleThreshold * postureSensitivityFactor)) {
+        feedbackMessages.push("Align your head (pull back).");
+        postureIsGood = false;
     }
-  }
+    if (Math.abs(currentMetrics.shoulderTilt) > (shoulderTiltAngleThreshold * postureSensitivityFactor)) {
+        feedbackMessages.push("Level your shoulders.");
+        postureIsGood = false;
+    }
+}
   
   // --- Debounce/Grace Period Logic ---
   const now = Date.now();
