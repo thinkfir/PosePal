@@ -2,23 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PosePal Tracker</title>
+  <title>PoseLift Tracker</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
-    <h1>PosePal</h1>
+    <h1>PoseLift</h1>
     <canvas id="output" width="640" height="480"></canvas>
     <div id="info">Posture: <span id="status">Checking...</span></div>
+    <button id="openSettingsButton">Settings</button>
   </div>
 
   <video id="video" playsinline style="display: none;"></video>
   
-  
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+  <!-- MediaPipe scripts -->
+  <script src="mediapipe.libs/pose.js"></script>
+  <script src="mediapipe.libs/camera_utils.js"></script>
 
-  
+  <!-- Your script -->
   <script src="script.js"></script>
 </body>
 </html>

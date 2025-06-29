@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PoseCorrect Settings</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .setting { margin-bottom: 15px; }
+        label { display: inline-block; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>PoseCorrect Settings</h1>
+
+    <div class="setting">
+        <label for="enableNotifications">Enable Notifications:</label>
+        <input type="checkbox" id="enableNotifications">
+    </div>
+
+    <div class="setting">
+        <label for="enableAudio">Enable Audio Alerts:</label>
+        <input type="checkbox" id="enableAudio">
+    </div>
+
+    <div class="setting">
+        <label for="enablePip">Enable Picture-in-Picture:</label>
+        <input type="checkbox" id="enablePip">
+    </div>
+    
+    <div class="setting">
+        <label for="enablePipBlur">Blur screen in PiP on bad posture:</label>
+        <input type="checkbox" id="enablePipBlur">
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

@@ -31,6 +31,16 @@ const camera = new Camera(videoElement, {
 });
 camera.start();
 
+// Event listener for the settings button
+document.getElementById('openSettingsButton').addEventListener('click', () => {
+    if (chrome.runtime.openOptionsPage) {
+        chrome.runtime.openOptionsPage();
+    } else {
+        // Fallback for older Chrome versions or if the function is not available
+        window.open(chrome.runtime.getURL('settings.html'));
+    }
+});
+
 // Analyze posture from results
 function onResults(results) {
   canvasCtx.save();

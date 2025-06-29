@@ -1,3 +1,4 @@
+// c:\Users\rajes\VSCode Projects\Posepal\tracking\posepal-tracking\background.js
 console.log("PoseCorrect background script loaded.");
 
 // 1. Open tracker.html on startup or install
@@ -12,6 +13,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   // Initialize default settings on install (Phase 2)
   // chrome.storage.local.set({ blurEnabled: true, audioEnabled: true, notificationsEnabled: true });
 });
+
 function openTrackerPage() {
   const trackerUrl = chrome.runtime.getURL("index.html"); // Adjusted path
   chrome.tabs.query({ url: trackerUrl }, (tabs) => {
@@ -38,6 +40,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
   }
   return true; // For async response
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "POSTURE_STATUS") {
+    console.log("Background: Received posture status:", message.status);
+    if (message.status === "Bad Posture") {
+      // Check notification setting before showing
+      chrome.storage.sync.get('poseCorrectSettings', (data) => {
+        if (data.poseCorrectSettings && data.poseCorrectSettings.enableNotifications) {
+          const notificationId = 'postureNotification-' + Date.now();
+          chrome.notifications.create(notificationId, {
+            type: 'basic',
+            iconUrl: 'icons/icon128.png',
+            title: 'Posture Check',
+            message: 'Please check your posture!',
+            priority: 2
+          });
+        }
+      });
+    }
+    // Optional: Update badge or other UI based on status
+    // chrome.action.setBadgeText({ text: message.status === "Bad Posture" ? " slouch" : "good" });
+  }
+});
+
+// Optional: Clear notification when user clicks on it
+chrome.notifications.onClicked.addListener((notificationId) => {
+  if (notificationId.startsWith('postureNotification-')) {
+    chrome.notifications.clear(notificationId);
+  }
 });
 
 function updateBadge(status) {
