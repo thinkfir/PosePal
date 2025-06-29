@@ -78,53 +78,32 @@ function onResults(results) {
   const dyLeft = leftShoulder.y - leftEar.y;
   const dyRight = rightShoulder.y - rightEar.y;
 
-  const horizontalTiltThreshold = 0.07;
-  const isHorizontallyTilted =
-    Math.abs(dxLeft) > horizontalTiltThreshold ||
-    Math.abs(dxRight) > horizontalTiltThreshold;
+  // --- Basic Posture Logic (Reverted) ---
+  const basicHorizontalTiltThreshold = 0.07; // Head tilted if ear is >7% of frame width from shoulder horizontally
+  const basicMinVerticalNeckHeight = 0.03;  // Head dropped if ear is <3% of frame height above shoulder (dy is positive if ear is above shoulder)
+  const basicForwardHeadOffsetThreshold = -0.05; // Head forward if ear.x is < shoulder.x by 5% of frame width (more negative dx)
 
-  const minVerticalNeckHeight = 0.025; // Adjusted from 0.05
-  const isHeadDropped =
-    dyLeft < minVerticalNeckHeight ||
-    dyRight < minVerticalNeckHeight;
+  let currentPosture = "Good Posture"; // Default to Good
 
-  const neckCrunchVerticalMax = 0.10;
-  const neckCrunchHorizontalThreshold = 0.03;
-
-  const isLeftNeckCrunched = 
-    (dyLeft >= minVerticalNeckHeight && dyLeft < neckCrunchVerticalMax) && 
-    (Math.abs(dxLeft) > neckCrunchHorizontalThreshold);
-  
-  const isRightNeckCrunched = 
-    (dyRight >= minVerticalNeckHeight && dyRight < neckCrunchVerticalMax) && 
-    (Math.abs(dxRight) > neckCrunchHorizontalThreshold);
-
-  const isForwardNeckCrunch = isLeftNeckCrunched || isRightNeckCrunched;
-
-  let feedbackMessages = [];
-
-  if (isHorizontallyTilted) {
-    feedbackMessages.push("Level your head.");
-  }
-  if (isHeadDropped) {
-    feedbackMessages.push("Lift your chin / Sit up straighter.");
-  }
-  if (isForwardNeckCrunch && !isHeadDropped) { // Avoid redundant message if head is already fully dropped
-    feedbackMessages.push("Bring your head back (ears over shoulders).");
+  // Check for bad posture conditions in a specific order
+  if (dyLeft < basicMinVerticalNeckHeight || dyRight < basicMinVerticalNeckHeight) {
+    currentPosture = "Bad Posture"; // Condition: Head Dropped
+  } else if (Math.abs(dxLeft) > basicHorizontalTiltThreshold || Math.abs(dxRight) > basicHorizontalTiltThreshold) {
+    currentPosture = "Bad Posture"; // Condition: Head Tilted
+  } else if (dxLeft < basicForwardHeadOffsetThreshold || dxRight < basicForwardHeadOffsetThreshold) {
+    // This is a simplified "head forward" check.
+    // dxLeft/Right = ear.x - shoulder.x. Negative means ear is to the left of shoulder (from camera view).
+    // Assuming a typical setup where the camera is in front, this can indicate leaning forward.
+    currentPosture = "Bad Posture"; // Condition: Head Forward
   }
 
-  // Check for uneven shoulders
-  const shoulderHeightDifferenceThreshold = 0.04; // e.g., 4% of image height
-  const shoulderHeightDifference = Math.abs(leftShoulder.y - rightShoulder.y);
-  if (shoulderHeightDifference > shoulderHeightDifferenceThreshold) {
-    feedbackMessages.push("Level your shoulders.");
-  }
-
-  if (feedbackMessages.length > 0) {
-    statusDisplay.textContent = feedbackMessages.join(" ");
+  // Update status display and send message
+  if (currentPosture === "Bad Posture") {
+    statusDisplay.textContent = "Bad Posture";
     statusDisplay.className = 'bad-posture';
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture", messages: feedbackMessages });
+      // Send a simple status, not detailed messages as in the more complex version
+      chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Bad Posture" });
     }
   } else {
     statusDisplay.textContent = "Good Posture";
@@ -133,6 +112,7 @@ function onResults(results) {
       chrome.runtime.sendMessage({ type: "POSTURE_STATUS", status: "Good Posture" });
     }
   }
+  // --- End of Reverted Basic Posture Logic ---
 
   canvasCtx.restore();
 }
